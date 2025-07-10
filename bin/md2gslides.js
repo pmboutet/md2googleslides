@@ -1,21 +1,5 @@
 #!/usr/bin/env node
 
-// Copyright 2016 Google Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-/* eslint-disable no-console, @typescript-eslint/no-var-requires */
-
 require('babel-polyfill');
 
 const Promise = require('promise');
@@ -34,15 +18,11 @@ const SCOPES = [
 
 const USER_HOME =
   process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
+
 const STORED_CREDENTIALS_PATH = path.join(
   USER_HOME,
   '.md2googleslides',
   'credentials.json'
-);
-const STORED_CLIENT_ID_PATH = path.join(
-  USER_HOME,
-  '.md2googleslides',
-  'client_id.json'
 );
 
 const parser = new ArgumentParser({
@@ -95,7 +75,7 @@ parser.addArgument(['-c', '--copy'], {
   required: false,
 });
 parser.addArgument(['--use-fileio'], {
-  help: 'Acknolwedge local and generated images are uploaded to https://file.io',
+  help: 'Acknowledge local and generated images are uploaded to https://file.io',
   action: 'storeTrue',
   dest: 'useFileio',
   required: false,
@@ -133,28 +113,23 @@ function prompt(url) {
 }
 
 function authorizeUser() {
-  // Google OAuth2 clients always have a secret, even if the client is an installed
-  // application/utility such as this.  Of course, in such cases the "secret" is
-  // actually publicly known; security depends entirely on the secrecy of refresh
-  // tokens, which effectively become bearer tokens.
+  const CREDENTIALS_PATH = path.join('/app', 'credentials.json');
 
-  // Load and parse client ID and secret from client_id.json file. (Create
-  // OAuth client ID from Credentials tab at console.developers.google.com
-  // and download the credentials as client_id.json to ~/.md2googleslides
-  let data; // needs to be scoped outside of try-catch
+  let data;
   try {
-    data = fs.readFileSync(STORED_CLIENT_ID_PATH);
+    data = fs.readFileSync(CREDENTIALS_PATH, { encoding: 'utf8' });
   } catch (err) {
-    console.log('Error loading client secret file:', err);
+    console.error('Erreur lors du chargement du fichier credentials.json :', err);
     throw err;
   }
-  if (data === undefined) {
-    console.log('Error loading client secret data');
-    throw 'No client secret found.';
-  }
-  const creds = JSON.parse(data).installed;
 
-  // Authorize user and get (& store) a valid access token.
+  const json = JSON.parse(data);
+  const creds = json.web || json.installed;
+
+  if (!creds || !creds.client_id || !creds.client_secret) {
+    throw new Error('client_id ou client_secret manquant dans credentials.json');
+  }
+
   const options = {
     clientId: creds.client_id,
     clientSecret: creds.client_secret,
@@ -181,9 +156,7 @@ function buildSlideGenerator(oauth2Client) {
 
 function eraseIfNeeded(slideGenerator) {
   if (args.erase || !args.id) {
-    return slideGenerator.erase().then(() => {
-      return slideGenerator;
-    });
+    return slideGenerator.erase().then(() => slideGenerator);
   } else {
     return Promise.resolve(slideGenerator);
   }
@@ -197,20 +170,18 @@ function loadCss(theme) {
     'styles',
     theme + '.css'
   );
-  const css = fs.readFileSync(cssPath, {encoding: 'UTF-8'});
-  return css;
+  return fs.readFileSync(cssPath, { encoding: 'UTF-8' });
 }
 
 function generateSlides(slideGenerator) {
   let source;
   if (args.file) {
     source = path.resolve(args.file);
-    // Set working directory relative to markdown file
     process.chdir(path.dirname(source));
   } else {
     source = 0;
   }
-  const input = fs.readFileSync(source, {encoding: 'UTF-8'});
+  const input = fs.readFileSync(source, { encoding: 'UTF-8' });
   const css = loadCss(args.style);
 
   return slideGenerator.generateFromMarkdown(input, {
@@ -228,6 +199,7 @@ function displayResults(id) {
     opener(url);
   }
 }
+
 authorizeUser()
   .then(buildSlideGenerator)
   .then(eraseIfNeeded)
