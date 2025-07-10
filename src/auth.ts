@@ -1,4 +1,5 @@
 import { google } from 'googleapis';
+import { authorizeUser } from '../src/auth';
 import fs from 'fs';
 import path from 'path';
 
