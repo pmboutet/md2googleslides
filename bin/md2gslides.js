@@ -6,7 +6,7 @@ const Promise = require('promise');
 const fs = require('fs');
 const path = require('path');
 const ArgumentParser = require('argparse').ArgumentParser;
-const UserAuthorizer = require('../lib/auth').default;
+const { google } = require('googleapis');
 const SlideGenerator = require('../lib/slide_generator').default;
 const opener = require('opener');
 
@@ -14,15 +14,6 @@ const SCOPES = [
   'https://www.googleapis.com/auth/presentations',
   'https://www.googleapis.com/auth/drive',
 ];
-
-const USER_HOME =
-  process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
-
-const STORED_CREDENTIALS_PATH = path.join(
-  USER_HOME,
-  '.md2googleslides',
-  'credentials.json'
-);
 
 const parser = new ArgumentParser({
   version: '1.0.0',
@@ -88,34 +79,37 @@ function handleError(err) {
 }
 
 function authorizeUser() {
-  const creds = JSON.parse(fs.readFileSync('/app/credentials.json')).web;
+  const credsPath = '/app/credentials.json';
+  const credentials = JSON.parse(fs.readFileSync(credsPath, 'utf-8'));
 
-  if (!creds.client_id || !creds.client_secret || !creds.redirect_uris) {
-    throw new Error('Missing required fields in credentials.json');
+  const { client_id, client_secret, refresh_token } = credentials;
+
+  if (!client_id || !client_secret || !refresh_token) {
+    throw new Error('Missing required credentials: client_id, client_secret, or refresh_token');
   }
 
-  const options = {
-    clientId: creds.client_id,
-    clientSecret: creds.client_secret,
-    redirectUri: creds.redirect_uris[0],
-    refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
-  };
+  const oauth2Client = new google.auth.OAuth2(
+    client_id,
+    client_secret,
+    'http://localhost' // dummy redirect
+  );
 
-  const auth = new UserAuthorizer(options);
-  return auth.getAccessTokenClient(SCOPES);
+  oauth2Client.setCredentials({ refresh_token });
+
+  return oauth2Client.getAccessToken().then(() => oauth2Client);
 }
 
-function buildSlideGenerator(oauth2Client) {
+function buildSlideGenerator(authClient) {
   const title = args.title || args.file;
   const presentationId = args.id;
   const copyId = args.copy;
 
   if (presentationId) {
-    return SlideGenerator.forPresentation(oauth2Client, presentationId);
+    return SlideGenerator.forPresentation(authClient, presentationId);
   } else if (copyId) {
-    return SlideGenerator.copyPresentation(oauth2Client, title, copyId);
+    return SlideGenerator.copyPresentation(authClient, title, copyId);
   } else {
-    return SlideGenerator.nxewPresentation(oauth2Client, title);
+    return SlideGenerator.newPresentation(authClient, title);
   }
 }
 
