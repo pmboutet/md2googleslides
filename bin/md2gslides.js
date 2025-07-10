@@ -9,7 +9,6 @@ const ArgumentParser = require('argparse').ArgumentParser;
 const UserAuthorizer = require('../lib/auth').default;
 const SlideGenerator = require('../lib/slide_generator').default;
 const opener = require('opener');
-const readline = require('readline');
 
 const SCOPES = [
   'https://www.googleapis.com/auth/presentations',
@@ -84,60 +83,26 @@ parser.addArgument(['--use-fileio'], {
 const args = parser.parseArgs();
 
 function handleError(err) {
-  console.log('Unable to generate slides:', err);
-}
-
-function prompt(url) {
-  if (args.headless) {
-    console.log('Authorize this app by visiting this url: ');
-    console.log(url);
-  } else {
-    console.log('Authorize this app in your browser.');
-    opener(url);
-  }
-  return new Promise((resolve, reject) => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-    rl.question('Enter the code here: ', code => {
-      rl.close();
-      code = code.trim();
-      if (code.length > 0) {
-        resolve(code);
-      } else {
-        reject(new Error('No code provided'));
-      }
-    });
-  });
+  console.error('Unable to generate slides:', err);
+  process.exit(1);
 }
 
 function authorizeUser() {
-  const CREDENTIALS_PATH = path.join('/app', 'credentials.json');
+  const creds = JSON.parse(fs.readFileSync('/app/credentials.json')).web;
 
-  let data;
-  try {
-    data = fs.readFileSync(CREDENTIALS_PATH, { encoding: 'utf8' });
-  } catch (err) {
-    console.error('Erreur lors du chargement du fichier credentials.json :', err);
-    throw err;
-  }
-
-  const json = JSON.parse(data);
-  const creds = json.web || json.installed;
-
-  if (!creds || !creds.client_id || !creds.client_secret) {
-    throw new Error('client_id ou client_secret manquant dans credentials.json');
+  if (!creds.client_id || !creds.client_secret || !creds.redirect_uris) {
+    throw new Error('Missing required fields in credentials.json');
   }
 
   const options = {
     clientId: creds.client_id,
     clientSecret: creds.client_secret,
-    filePath: STORED_CREDENTIALS_PATH,
-    prompt: prompt,
+    redirectUri: creds.redirect_uris[0],
+    refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
   };
+
   const auth = new UserAuthorizer(options);
-  return auth.getUserCredentials(args.user, SCOPES);
+  return auth.getAccessTokenClient(SCOPES);
 }
 
 function buildSlideGenerator(oauth2Client) {
@@ -150,7 +115,7 @@ function buildSlideGenerator(oauth2Client) {
   } else if (copyId) {
     return SlideGenerator.copyPresentation(oauth2Client, title, copyId);
   } else {
-    return SlideGenerator.newPresentation(oauth2Client, title);
+    return SlideGenerator.nxewPresentation(oauth2Client, title);
   }
 }
 
