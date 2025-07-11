@@ -1,444 +1,457 @@
-Generate Google Slides from markdown & HTML. Run from the command line or embed in another
-application.
+# md2googleslides
 
-This project was developed as an example of how to use the
-[Slides API](https://developers.google.com/slides).
+Generate Google Slides from markdown & HTML. Run from the command line or embed in another application.
 
-While it does not yet produce stunningly beautiful decks, you are encouraged to use
-this tool for quickly prototyping presentations.
+🚀 **Version 0.5.2** - Mise à jour majeure avec support Docker et dépendances sécurisées !
 
-Contributions are welcome.
+## ✨ Nouveautés de cette version
 
-## Installation and usage
+- 🔐 **Sécurité renforcée** : Suppression des dépendances obsolètes et vulnérables
+- 🐳 **Support Docker complet** : Dockerfile optimisé et Docker Compose
+- 🏗️ **CI/CD intégré** : GitHub Actions pour tests automatisés
+- 🛠️ **Outils de développement** : Makefile, scripts de test automatisés
+- 📦 **Dépendances modernes** : Node.js 18+, dernières versions des packages
 
-For command line use, install md2gslides globally:
+## 🚀 Installation rapide
 
-```sh
+### Option 1: Utilisation avec Docker (Recommandé)
+
+```bash
+# Cloner le repository
+git clone https://github.com/pmboutet/md2googleslides.git
+cd md2googleslides
+
+# Construire et tester
+make docker-build
+make docker-test
+
+# Utilisation
+docker run --rm -v $(pwd):/workspace md2googleslides:latest /workspace/slides.md --title "Ma Présentation"
+```
+
+### Option 2: Installation locale
+
+```bash
+# Prérequis: Node.js 18+
 npm install -g md2gslides
+
+# Utilisation
+md2gslides slides.md --title "Ma Présentation"
 ```
 
-Then get your OAuth client ID credentials:
+### Option 3: Migration depuis une ancienne version
 
-* Create (or reuse) a developer project at <https://console.developers.google.com>
-* Enable Google Slides API at [API library page](https://console.developers.google.com/apis/library)
-* Go to [Credentials page](https://console.developers.google.com/apis/credentials) and click "+ Create credentials" at the top
-* Select "OAuth client ID" authorization credentials
-* Choose type "Computer Application" and give it some name.
-* Download client credentials file.
-* Copy it to `client_id.json` (name has to match) and save to `~/.md2googleslides`.
+```bash
+# Dans votre projet existant
+curl -sSL https://raw.githubusercontent.com/pmboutet/md2googleslides/main/scripts/migrate.sh | bash
 
-After installing, import your slides by running:
-
-```sh
-md2gslides slides.md --title "Talk Title"
+# Ou en mode simulation d'abord
+curl -sSL https://raw.githubusercontent.com/pmboutet/md2googleslides/main/scripts/migrate.sh | bash -s -- --dry-run
 ```
 
-This will generate new Google Slides in your account with title `Talk Title`. 
-
-NOTE: The first time the command is run you will be prompted for authorization. OAuth token
-credentials are stored locally in a file named `~/.md2googleslides/credentials.json`.
-
-Each time you will run the above comment, new slide deck will be generated. In order to work on exactly the same
-deck, just get the ID of the already generated slides. For example, you can use following command:
-
-```
-# To reuse deck available at: https://docs.google.com/presentation/d/<some id>/edit#
-md2gslides slides.md --title "Talk Title" --append <some id> --erase
-```
-
-## Supported markdown rules
-
-md2gslides uses a subset of the [CommonMark](http://spec.commonmark.org/0.26/) and
-[Github Flavored Markdown](https://help.github.com/categories/writing-on-github/) rules for
-markdown.
-
-### Slides
-
-Each slide is typically represented by a header, followed by zero or more block elements.
-
-Begin a new slide with a horizontal rule (`---`). The separator
-may be omitted for the first slide.
-
-The following examples show how to create slides of various layouts:
-
-#### Title slide
-
-<pre>
-    ---
-
-    # This is a title slide
-    ## Your name here
-</pre>
-
-![Title slide](https://github.com/googlesamples/md2googleslides/raw/master/examples/title_slide.png)
-
-#### Section title slides
-
-<pre>
-    ---
-
-    # This is a section title
-</pre>
-
-![Section title slide](https://github.com/googlesamples/md2googleslides/raw/master/examples/section_title_slide.png)
-
-#### Section title & body slides
-
-<pre>
-    ---
-
-    # Section title & body slide
-
-    ## This is a subtitle
-
-    This is the body
-</pre>
-
-![Section title & body slide](https://github.com/googlesamples/md2googleslides/raw/master/examples/section_title_body_slide.png)
-
-#### Title & body slides
-
-<pre>
-    ---
-
-    # Title & body slide
-
-    This is the slide body.
-</pre>
-
-![Title & body slide](https://github.com/googlesamples/md2googleslides/raw/master/examples/title_body_slide.png)
-
-#### Main point slide
-
-Add `{.big}` to the title to make a slide with one big point
-
-<pre>
-    ---
-
-    # This is the main point {.big}
-</pre>
-
-![Main point slide](https://github.com/googlesamples/md2googleslides/raw/master/examples/main_point_slide.png)
-
-#### Big number slide
-
-Use `{.big}` on a header in combination with a body too.
-
-<pre>
-    ---
-
-    # 100% {.big}
-
-    This is the body
-</pre>
-
-![Big number slide](examples/big_number_slide.png)
-
-
-#### Two column slides
-
-Separate columns with `{.column}`. The marker must appear
-on its own line with a blank both before and after.
-
-<pre>
-    ---
-
-    # Two column layout
-
-    This is the left column
-
-    {.column}
-
-    This is the right column
-</pre>
-
-![Two column slide](https://github.com/googlesamples/md2googleslides/raw/master/examples/two_column_slide.png)
-
-### Themes
-
-`md2googleslides` does not edit or control any theme related options. Just set a base theme you want on Google Slides directly.
-Even if you will use `--append` option for deck reuse, theme will be not changed.
-
-### Images
-
-#### Inline images
-
-Images can be placed on slides using image tags. Multiple images
-can be included. Mulitple images in a single paragraph are arranged in columns,
-mutiple paragraphs arranged as rows.
-
-Note: Images are currently scaled and centered to fit the
-slide template.
-
-<pre>
-    ---
-
-    # Slides can have images
-
-    ![](https://placekitten.com/900/900)
-</pre>
-
-![Slide with image](https://github.com/googlesamples/md2googleslides/raw/master/examples/image_slide.png)
-
-#### Background images
-
-Set the background image of a slide by adding `{.background}` to
-the end of an image URL.
-
-<pre>
-    ---
-
-    # Slides can have background images
-
-    ![](https://placekitten.com/1600/900){.background}
-</pre>
-
-![Slide with background image](https://github.com/googlesamples/md2googleslides/raw/master/examples/background_image_slide.png)
-
-### Videos
-
-Include YouTube videos with a modified image tag.
-
-<pre>
-    ---
-
-    # Slides can have videos
-
-    @[youtube](MG8KADiRbOU)
-</pre>
-
-![Slide with video](https://github.com/googlesamples/md2googleslides/raw/master/examples/video_slide.png)
-
-### Speaker notes
-
-Include speaker notes for a slide using HTML comments. Text inside
-the comments may include markdown for formatting, though only text
-formatting is allowed. Videos, images, and tables are ignored inside
-speaker notes.
-
-<pre>
-    ---
-
-    # Slide title
-
-    ![](https://placekitten.com/1600/900){.background}
-
-    &lt;!--
-    These are speaker notes.
-    --&gt;
-</pre>
-
-### Formatting
-
-Basic formatting rules are allowed, including:
-
-* Bold
-* Italics
-* Code
-* Strikethrough
-* Hyperlinks
-* Ordered lists
-* Unordered lists
-
-The following markdown illustrates a few common styles.
-
-<pre>
-**Bold**, *italics*, and ~~strikethrough~~ may be used.
-
-Ordered lists:
-1. Item 1
-1. Item 2
-  1. Item 2.1
-
-Unordered lists:
-* Item 1
-* Item 2
-  * Item 2.1
-</pre>
-
-Additionally, a subset of inline HTML tags are supported for styling.
-
-* `<span>`
-* `<sup>`
-* `<sub>`
-* `<em>`
-* `<i>`
-* `<strong>`
-* `<b>`
-
-Supported CSS styles for use with `<span>` elements:
-
-* `color`
-* `background-color`
-* `font-weight: bold`
-* `font-style: italic`
-* `text-decoration: underline`
-* `text-decoration: line-through`
-* `font-family`
-* `font-variant: small-caps`
-* `font-size` (must use points for units)
-
-You may also use `{style="..."}` [attributes](https://www.npmjs.com/package/markdown-it-attrs)
-after markdown elements to apply styles. This can be used on headers, inline
-elements, code blocks, etc.
-
-### Emoji
-
-Use Github style [emoji](http://www.webpagefx.com/tools/emoji-cheat-sheet/) in your text using
-the `:emoji:`.
-
-The following example inserts emoji in the header and body of the slide.
-
-<pre>
-### I :heart: cats
-
-:heart_eyes_cat:
-</pre>
-
-### Code blocks
-
-Both indented and fenced code blocks are supported, with syntax highlighting.
-
-The following example renders highlighted code.
-
-<pre>
-### Hello World
-
-```javascript
-console.log('Hello world');
-```
-</pre>
-
-To change the syntax highlight theme specify the `--style <theme>` option on the
-command line. All [highlight.js themes](https://github.com/isagalaev/highlight.js/tree/master/src/styles)
-are supported. For example, to use the github theme
-
-```sh
-md2gslides slides.md --style github
+## 🔧 Configuration Google
+
+1. Créez un projet sur [Google Cloud Console](https://console.developers.google.com)
+2. Activez l'API Google Slides
+3. Créez des credentials OAuth 2.0 pour "Application de bureau"
+4. Téléchargez le fichier JSON et sauvegardez-le comme `~/.md2googleslides/client_id.json`
+
+```bash
+mkdir -p ~/.md2googleslides
+cp /path/to/downloaded/credentials.json ~/.md2googleslides/client_id.json
+chmod 600 ~/.md2googleslides/client_id.json
 ```
 
-You can also apply additional style changes to the entire block, such as changing
-the font size:
+## 🐳 Utilisation avec Docker
 
-<pre>
-### Hello World
+### Docker simple
+```bash
+# Construction
+docker build -t md2googleslides .
 
-```javascript
-console.log('Hello world');
-```{style="font-size: 36pt"}
-</pre>
+# Utilisation avec credentials
+docker run --rm \
+  -v $(pwd):/workspace \
+  -v ~/.md2googleslides:/home/md2gslides/.md2googleslides \
+  md2googleslides \
+  /workspace/presentation.md --title "Ma Présentation"
+```
 
-### Tables
+### Docker Compose
+```bash
+# Démarrage du service
+docker-compose up md2googleslides
 
-Tables are supported via
-[GFM](https://guides.github.com/features/mastering-markdown/#GitHub-flavored-markdown) syntax.
+# Avec fichier spécifique
+docker-compose run --rm md2googleslides /workspace/slides.md --title "Test"
+```
 
-Note: Including tables and other block elements on the same slide may produce poor results with
-overlapping elements. Either avoid or manually adjust the layout after generating the slides.
+## 🛠️ Développement
 
-The following generates a 2x5 table on the slide.
+### Prérequis
+- Node.js 18 ou supérieur
+- Docker (optionnel)
+- Make (optionnel, pour les raccourcis)
 
-<pre>
-### Top pets in the United States
+### Installation développement
+```bash
+git clone https://github.com/pmboutet/md2googleslides.git
+cd md2googleslides
 
-Animal | Number
--------|--------
-Fish   | 142 million
-Cats   | 88 million
-Dogs   | 75 million
-Birds  | 16 million
-</pre>
+# Avec Make (recommandé)
+make install
+make build
+make test
 
-### Local images
-
-Images referencing local paths temporarily uploaded and hosted to [file.io](https://file.io). File.io
-is an emphemeral file serving service that generates short-lived random URLs to the upload file and deletes
-content shortly after use.
-
-Since local images are uploaded to a thrid party, explicit opt-in is required to use this feature.
-Include the `--use-fileio` option to opt-in to uploading images. This applies to file-based images as well
-as automatically rasterized content like math expressions and SVGs.
-
-### Image rasterization
-
-Slides can also include generated images, using `$$$` fenced blocks
-for the data. Currently supported generated images are math expression (TeX
-and MathML) as well as SVG. Rasterized images are treated like local images are require
-opt-in to uploading images to a 3rd party service via the `--use-fileio` option.
-
-Using TeX:
-
-<pre>
-# How about some math?
-
-$$$ math
-\cos (2\theta) = \cos^2 \theta - \sin^2 \theta
-$$$
-</pre>
-
-SVG
-
-<pre>
-# Or some SVG?
-
-$$$ svg
-&lt;svg xmlns="http://www.w3.org/2000/svg"
-     xmlns:xlink="http://www.w3.org/1999/xlink"
-     viewBox="0 0 48 48">
-  &lt;defs>
-    &lt;path id="a" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
-  &lt;/defs>
-  &lt;clipPath id="b">
-    &lt;use xlink:href="#a" overflow="visible"/>
-  &lt;/clipPath><path clip-path="url(#b)" fill="#FBBC05" d="M0 37V11l17 13z"/>
-  &lt;path clip-path="url(#b)" fill="#EA4335" d="M0 11l17 13 7-6.1L48 14V0H0z"/>
-  &lt;path clip-path="url(#b)" fill="#34A853" d="M0 37l30-23 7.9 1L48 0v48H0z"/>
-  &lt;path clip-path="url(#b)" fill="#4285F4" d="M48 48L17 24l-4-3 35-10z"/>
-&lt;/svg>
-$$$
-</pre>
-
-Like local images, generated images are temporarily served via file.io.
-
-Pull requests for other image generators (e.g. mermaid, chartjs, etc.) are welcome!
-
-## Reading from standard input
-
-You can also pipe markdown into the tool by omitting the file name argument.
-
-## Contributing
-
-With the exception of `/bin/md2gslides.js`, TypeScript is used throughout and compiled
-with [Babel](https://babeljs.io/). [Mocha](https://mochajs.org/) and [Chai](http://chaijs.com/)
-are used for testing.
-
-Before anything, ensure you have all dependencies:
-
-```sh
+# Ou manuellement
 npm install
-```
-
-To compile:
-
-```sh
 npm run compile
+npm test
 ```
 
-To run unit tests:
-
-```sh
-npm run test
+### Commandes utiles
+```bash
+make help              # Voir toutes les commandes
+make all               # Build complet + tests
+make docker-build      # Construire l'image Docker
+make test-docker       # Tests Docker uniquement
+make security          # Audit de sécurité
+make ci                # Pipeline CI/CD local
 ```
 
-To lint/format tests:
+## 📝 Syntaxe Markdown supportée
 
-```sh
-npm run lint
+### Slides de base
+```markdown
+# Titre de la présentation
+## Sous-titre
+
+---
+
+## Slide suivante
+Contenu de la slide
+
+---
+
+## Points importants
+- Point 1
+- Point 2
+- Point 3
 ```
 
-See [CONTRIBUTING](CONTRIBUTING.md) for additional terms.
+### Layouts spéciaux
+```markdown
+# Grand titre {.big}
 
-## License
+---
 
-This library is licensed under Apache 2.0. Full license text is
-available in [LICENSE](LICENSE).
+# Deux colonnes
+
+Contenu gauche
+
+{.column}
+
+Contenu droite
+
+---
+
+# Image de fond
+![](https://example.com/image.jpg){.background}
+```
+
+### Code avec coloration syntaxique
+````markdown
+```javascript
+function hello() {
+    console.log("Hello World!");
+}
+```
+````
+
+### Vidéos YouTube
+```markdown
+@[youtube](VIDEO_ID)
+```
+
+## 🔍 Tests et validation
+
+### Tests automatisés
+```bash
+# Tests complets
+./scripts/test.sh
+
+# Tests Docker uniquement
+./scripts/test.sh --docker-only
+
+# Tests avec Make
+make test
+make test-docker
+```
+
+### Tests manuels
+```bash
+# Créer un fichier de test
+echo -e "# Test\n---\n## Slide 1\nContenu test" > test.md
+
+# Test avec Node.js
+node bin/md2gslides.js test.md --title "Test" --dry-run
+
+# Test avec Docker
+docker run --rm -v $(pwd):/workspace md2googleslides:latest \
+  /workspace/test.md --title "Test Docker" --dry-run
+```
+
+## 🔒 Sécurité
+
+Cette version corrige plusieurs vulnérabilités de sécurité :
+
+- ✅ Suppression de `request` et `request-promise-native` (dépréciés)
+- ✅ Remplacement de `babel-polyfill` par `core-js`
+- ✅ Mise à jour de toutes les dépendances vers les dernières versions
+- ✅ Utilisateur non-root dans Docker
+- ✅ Scan automatique des vulnérabilités en CI/CD
+
+### Audit de sécurité
+```bash
+npm audit
+make security
+trivy image md2googleslides:latest
+```
+
+## 📊 Monitoring et métriques
+
+```bash
+# Taille de l'image Docker
+make metrics
+
+# Logs en temps réel (Docker Compose)
+docker-compose logs -f
+
+# Statistiques d'utilisation
+docker stats md2googleslides
+```
+
+## 🚨 Résolution de problèmes
+
+### Problèmes courants
+
+**1. Erreur de compilation TypeScript**
+```bash
+make clean
+make install
+make build
+```
+
+**2. Problèmes Docker permissions**
+```bash
+chmod 600 ~/.md2googleslides/client_id.json
+docker build --no-cache -t md2googleslides .
+```
+
+**3. Erreurs credentials Google**
+```bash
+# Vérifier le fichier
+cat ~/.md2googleslides/client_id.json
+
+# Vérifier les permissions
+ls -la ~/.md2googleslides/
+```
+
+### Mode debug
+```bash
+# Debug Node.js
+DEBUG=* node bin/md2gslides.js slides.md
+
+# Debug Docker
+docker run --rm -it --entrypoint /bin/sh md2googleslides:latest
+```
+
+## 📈 Performance
+
+### Optimisations intégrées
+- 🏗️ Build multi-stage Docker pour réduire la taille
+- 📦 Cache des dépendances npm
+- 🚀 Image Alpine Linux légère
+- 💾 Limitation mémoire configurée (2GB par défaut)
+
+### Métriques de performance
+```bash
+# Temps de compilation
+time npm run compile
+
+# Taille de l'image finale
+docker images md2googleslides:latest
+
+# Test de charge
+for i in {1..10}; do time docker run --rm -v $(pwd):/workspace md2googleslides:latest /workspace/test.md --dry-run; done
+```
+
+## 🔄 Migration depuis l'ancienne version
+
+### Migration automatique
+```bash
+# Script de migration complet
+curl -sSL https://raw.githubusercontent.com/pmboutet/md2googleslides/main/scripts/migrate.sh -o migrate.sh
+chmod +x migrate.sh
+
+# Test en mode simulation
+./migrate.sh --dry-run
+
+# Migration effective
+./migrate.sh
+```
+
+### Migration manuelle
+1. **Backup de votre configuration actuelle**
+```bash
+cp package.json package.json.backup
+cp -r node_modules node_modules.backup 2>/dev/null || true
+```
+
+2. **Mise à jour des fichiers**
+```bash
+# Remplacer package.json avec la nouvelle version
+# Créer Dockerfile, docker-compose.yml, Makefile
+# Créer les scripts dans scripts/
+```
+
+3. **Installation et test**
+```bash
+rm -rf node_modules package-lock.json
+npm install
+npm run compile
+npm test
+```
+
+## 🌐 Déploiement
+
+### Déploiement Docker simple
+```bash
+# Production
+docker run -d \
+  --name md2googleslides-prod \
+  --restart unless-stopped \
+  -v /data/workspace:/workspace \
+  -v /data/credentials:/home/md2gslides/.md2googleslides \
+  md2googleslides:latest
+```
+
+### Déploiement Kubernetes
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: md2googleslides
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: md2googleslides
+  template:
+    metadata:
+      labels:
+        app: md2googleslides
+    spec:
+      containers:
+      - name: md2googleslides
+        image: ghcr.io/pmboutet/md2googleslides:latest
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+```
+
+### Déploiement avec CI/CD
+Le pipeline GitHub Actions se déclenche automatiquement sur :
+- Push sur `main` → Build et tests
+- Pull Request → Tests complets
+- Release → Déploiement en production
+
+## 🔗 Intégration avec d'autres outils
+
+### API REST (exemple)
+```javascript
+const express = require('express');
+const { execSync } = require('child_process');
+
+app.post('/convert', (req, res) => {
+  const markdown = req.body.markdown;
+  const title = req.body.title || 'Presentation';
+  
+  // Sauvegarder le markdown
+  fs.writeFileSync('/tmp/input.md', markdown);
+  
+  // Convertir avec md2googleslides
+  const result = execSync(`docker run --rm -v /tmp:/workspace md2googleslides:latest /workspace/input.md --title "${title}"`);
+  
+  res.json({ success: true, output: result.toString() });
+});
+```
+
+### Webhook GitHub
+```bash
+# Conversion automatique lors de push
+curl -X POST https://api.github.com/repos/user/repo/hooks \
+  -H "Authorization: token YOUR_TOKEN" \
+  -d '{
+    "name": "web",
+    "active": true,
+    "events": ["push"],
+    "config": {
+      "url": "https://your-server.com/webhook/md2slides",
+      "content_type": "json"
+    }
+  }'
+```
+
+## 📚 Ressources et documentation
+
+### Documentation complète
+- [Guide d'installation détaillé](docs/installation.md)
+- [Référence de la syntaxe Markdown](docs/markdown-syntax.md)
+- [Configuration avancée](docs/advanced-config.md)
+- [Guide de déploiement](docs/deployment.md)
+
+### Support et communauté
+- 🐛 [Issues GitHub](https://github.com/pmboutet/md2googleslides/issues)
+- 💬 [Discussions](https://github.com/pmboutet/md2googleslides/discussions)
+- 📖 [Wiki](https://github.com/pmboutet/md2googleslides/wiki)
+
+### Changelog
+Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet des versions.
+
+## 🤝 Contribution
+
+Les contributions sont les bienvenues ! Voir [CONTRIBUTING.md](CONTRIBUTING.md) pour les détails.
+
+### Processus de contribution
+1. Fork le projet
+2. Créer une branche feature (`git checkout -b feature/AmazingFeature`)
+3. Commiter les changements (`git commit -m 'Add AmazingFeature'`)
+4. Pousser vers la branche (`git push origin feature/AmazingFeature`)
+5. Ouvrir une Pull Request
+
+### Tests locaux
+```bash
+# Avant de proposer une PR
+make ci
+make test
+make security
+```
+
+## 📄 Licence
+
+Ce projet est sous licence Apache 2.0. Voir [LICENSE](LICENSE) pour plus de détails.
+
+## 🙏 Remerciements
+
+- [Steven Bazyl](https://github.com/sqrrrl) - Auteur original
+- [Google Workspace](https://github.com/googleworkspace) - Repository officiel
+- Tous les [contributeurs](https://github.com/pmboutet/md2googleslides/graphs/contributors)
+
+---
+
+**⭐ Si ce projet vous aide, n'hésitez pas à lui donner une étoile !**
