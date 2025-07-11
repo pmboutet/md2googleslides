@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  md2googleslides:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: md2googleslides:latest
+    container_name: md2googleslides
+    volumes:
+      # Monter le répertoire de travail
+      - ./workspace:/workspace:ro
+      # Monter les credentials Google
+      - ~/.md2googleslides:/home/md2gslides/.md2googleslides:ro
+      # Monter un répertoire pour les outputs (si nécessaire)
+      - ./output:/output
+    environment:
+      - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=2048
+    # Commande par défaut (peut être surchargée)
+    command: ["--help"]
+    # Redémarrage automatique en cas d'erreur
+    restart: unless-stopped
+    # Limites de ressources
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # Service pour le développement avec hot reload
+  md2googleslides-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    image: md2googleslides:dev
+    container_name: md2googleslides-dev
+    volumes:
+      - .:/app
+      - ~/.md2googleslides:/home/md2gslides/.md2googleslides:ro
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: ["npm", "run", "dev"]
+    profiles:
+      - dev
+
+  # Service pour les tests
+  md2googleslides-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: md2googleslides:test
+    container_name: md2googleslides-test
+    volumes:
+      - .:/app:ro
+    environment:
+      - NODE_ENV=test
+    command: ["npm", "test"]
+    profiles:
+      - test
+
+# Réseaux
+networks:
+  default:
+    name: md2googleslides-network
+
+# Volumes nommés pour la persistance
+volumes:
+  workspace:
+    driver: local
+  credentials:
+    driver: local
