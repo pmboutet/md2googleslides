@@ -16,9 +16,8 @@ import Debug from 'debug';
 import {OAuth2Client, Credentials} from 'google-auth-library';
 import path from 'path';
 import mkdirp from 'mkdirp';
-import lowdb from 'lowdb';
-import FileSync from 'lowdb/adapters/FileSync';
-import Memory from 'lowdb/adapters/Memory';
+import {Low} from 'lowdb';
+import {JSONFileSync} from 'lowdb/node';
 
 const debug = Debug('md2gslides');
 
@@ -29,6 +28,10 @@ export interface AuthOptions {
   clientSecret: string;
   prompt: UserPrompt;
   filePath?: string;
+}
+
+interface CredentialsDb {
+  [key: string]: Credentials;
 }
 
 /**
@@ -53,7 +56,7 @@ export interface AuthOptions {
  */
 export default class UserAuthorizer {
   private redirectUrl = 'urn:ietf:wg:oauth:2.0:oob';
-  private db: lowdb.LowdbSync<Credentials>;
+  private db: Low<CredentialsDb>;
   private clientId: string;
   private clientSecret: string;
   private prompt: UserPrompt;
@@ -93,11 +96,12 @@ export default class UserAuthorizer {
     oauth2Client.on('tokens', (tokens: Credentials) => {
       if (tokens.refresh_token) {
         debug('Saving refresh token');
-        this.db.set(user, tokens).write();
+        this.db.data[user] = tokens;
+        this.db.write();
       }
     });
 
-    const tokens = this.db.get(user).value();
+    const tokens = this.db.data[user];
     if (tokens) {
       debug('User previously authorized, refreshing');
       oauth2Client.setCredentials(tokens);
@@ -118,21 +122,32 @@ export default class UserAuthorizer {
   }
 
   /**
-   * Initialzes the token database.
+   * Initializes the token database.
    *
    * @param {String} filePath Path to database, null if use in-memory DB only.
-   * @returns {lowdb} database instance
+   * @returns {Low} database instance
    * @private
    */
-  private static initDbSync<T>(filePath?: string): lowdb.LowdbSync<T> {
-    let adapter: lowdb.AdapterSync;
+  private static initDbSync(filePath?: string): Low<CredentialsDb> {
+    let adapter: JSONFileSync<CredentialsDb>;
     if (filePath) {
       const parentDir = path.dirname(filePath);
       mkdirp.sync(parentDir);
-      adapter = new FileSync<T>(filePath);
+      adapter = new JSONFileSync<CredentialsDb>(filePath);
     } else {
-      adapter = new Memory<T>('');
+      // For in-memory storage, we'll use a temporary file
+      adapter = new JSONFileSync<CredentialsDb>('/tmp/md2gslides-memory.json');
     }
-    return lowdb(adapter);
+    
+    const db = new Low(adapter, {} as CredentialsDb);
+    db.read();
+    
+    // Initialize data if it doesn't exist
+    if (!db.data) {
+      db.data = {};
+      db.write();
+    }
+    
+    return db;
   }
 }
