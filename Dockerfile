@@ -52,10 +52,8 @@ WORKDIR /app
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/package-lock.json ./
 
-# Installer seulement les dépendances de production + babel-polyfill manquant
-RUN npm ci --omit=dev --ignore-scripts && \
-    npm install babel-polyfill --save --ignore-scripts && \
-    npm cache clean --force
+# Installer seulement les dépendances de production
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 # Copier le code compilé depuis le stage builder
 COPY --from=builder /app/lib ./lib
