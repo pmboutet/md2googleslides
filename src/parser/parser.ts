@@ -27,8 +27,23 @@ import video from 'markdown-it-video';
 // @ts-ignore
 import customFence from 'markdown-it-fence';
 
+// Helper function to normalize plugin exports
+function normalizePlugin(plugin: any): any {
+  if (typeof plugin === 'function') {
+    return plugin;
+  }
+  if (plugin && typeof plugin.default === 'function') {
+    return plugin.default;
+  }
+  if (plugin && typeof plugin.apply === 'function') {
+    return plugin;
+  }
+  throw new Error(`Invalid plugin format: ${typeof plugin}`);
+}
+
 function generatedImage(md: unknown): void {
-  return customFence(md, 'generated_image', {
+  const normalizedCustomFence = normalizePlugin(customFence);
+  return normalizedCustomFence(md, 'generated_image', {
     marker: '$',
     validate: () => true,
   });
@@ -42,12 +57,12 @@ const mdOptions = {
 };
 
 const parser = markdownIt(mdOptions)
-  .use(attrs)
-  .use(lazyHeaders)
-  .use(emoji, {shortcuts: {}})
-  .use(expandTabs, {tabWidth: 4})
+  .use(normalizePlugin(attrs))
+  .use(normalizePlugin(lazyHeaders))
+  .use(normalizePlugin(emoji), {shortcuts: {}})
+  .use(normalizePlugin(expandTabs), {tabWidth: 4})
   .use(generatedImage)
-  .use(video, {youtube: {width: 640, height: 390}});
+  .use(normalizePlugin(video), {youtube: {width: 640, height: 390}});
 
 function parseMarkdown(markdown: string): Token[] {
   return parser.parse(markdown, {});
