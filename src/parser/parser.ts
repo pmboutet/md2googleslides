@@ -14,11 +14,12 @@
 
 import markdownIt from 'markdown-it';
 import Token from 'markdown-it/lib/token';
-import attrs from 'markdown-it-attrs';
-import lazyHeaders from 'markdown-it-lazy-headers';
-import emoji from 'markdown-it-emoji';
-import expandTabs from 'markdown-it-expand-tabs';
-import video from 'markdown-it-video';
+// Using require for plugins without proper ES module exports
+const attrs = require('markdown-it-attrs');
+const lazyHeaders = require('markdown-it-lazy-headers');  
+const emoji = require('markdown-it-emoji');
+const expandTabs = require('markdown-it-expand-tabs');
+const video = require('markdown-it-video');
 
 // Custom fence plugin implementation to replace markdown-it-fence
 function generatedImageFence(md: any, name: string, options: any) {
@@ -28,7 +29,6 @@ function generatedImageFence(md: any, name: string, options: any) {
   function fence(state: any, start: number, end: number, silent: boolean) {
     let pos, nextLine, markup, params, token, mem;
     let haveEndMarker = false;
-    let len = state.src.length;
 
     // Check out the first character quickly, which should filter out most of non-containers
     if (marker !== state.src[start]) { return false; }
