@@ -1,7 +1,7 @@
-# Utiliser l'image Node.js LTS officielle
+# Use official Node.js LTS image
 FROM node:20-alpine AS builder
 
-# Installer les dépendances système nécessaires pour Sharp et autres outils natifs
+# Install system dependencies required for Sharp and other native tools
 RUN apk add --no-cache \
     g++ \
     make \
@@ -16,66 +16,66 @@ RUN apk add --no-cache \
     libjpeg-turbo-dev \
     giflib-dev
 
-# Définir le répertoire de travail
+# Set working directory
 WORKDIR /app
 
-# Copier package.json seulement
+# Copy package files
 COPY package.json ./
+COPY yarn.lock* package-lock.json* ./
 
-# Installer toutes les dépendances SANS exécuter les scripts
-RUN npm install --ignore-scripts && npm cache clean --force
+# Install dependencies with proper build scripts
+RUN npm ci
 
-# Copier le code source
+# Copy source code
 COPY . .
 
-# Compiler avec TypeScript en mode permissif (continue même si erreurs)
-RUN (npx tsc --skipLibCheck --noImplicitAny false || echo "TypeScript compilation completed with warnings") && \
-    npx babel --extensions '.ts,.js' --source-maps both -d lib/ src/
+# Compile TypeScript and Babel properly
+RUN npm run compile
 
-# Stage de production
+# Production stage
 FROM node:20-alpine AS production
 
-# Installer les dépendances système runtime minimales
+# Install minimal runtime system dependencies
 RUN apk add --no-cache \
     vips \
     libc6-compat \
     curl
 
-# Créer un utilisateur non-root pour la sécurité
+# Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S md2gslides -u 1001 -G nodejs
 
-# Définir le répertoire de travail
+# Set working directory
 WORKDIR /app
 
-# Copier package.json et package-lock.json depuis le stage builder
+# Copy package files from builder stage
 COPY --from=builder /app/package.json ./
-COPY --from=builder /app/package-lock.json ./
+COPY --from=builder /app/package-lock.json* ./
 
-# Installer seulement les dépendances de production
-RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+# Install only production dependencies
+RUN npm ci --omit=dev && npm cache clean --force
 
-# Copier le code compilé depuis le stage builder
+# Copy compiled code from builder stage
 COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/bin ./bin
 
-# Copier les scripts
+# Copy scripts
 COPY scripts/ ./scripts/
 
-# Rendre les scripts exécutables
+# Make scripts executable
 RUN chmod +x scripts/*.sh
 
-# Créer le répertoire pour les credentials Google
+# Create directory for Google credentials
 RUN mkdir -p /home/md2gslides/.md2googleslides
 
-# Changer la propriété des fichiers vers l'utilisateur non-root
+# Change ownership to non-root user
 RUN chown -R md2gslides:nodejs /app && \
     chown -R md2gslides:nodejs /home/md2gslides
 
-# Passer à l'utilisateur non-root
+# Switch to non-root user
 USER md2gslides
 
-# Variables d'environnement
+# Environment variables
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max-old-space-size=2048"
 
@@ -83,19 +83,19 @@ ENV NODE_OPTIONS="--max-old-space-size=2048"
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD scripts/healthcheck.sh
 
-# Exposer le port (si nécessaire pour une API future)
+# Expose port (if needed for future API)
 EXPOSE 3000
 
-# Point d'entrée
+# Entry point
 ENTRYPOINT ["node", "bin/md2gslides.js"]
 
-# Commande par défaut
+# Default command
 CMD ["--help"]
 
-# Labels pour la documentation
+# Documentation labels
 LABEL maintainer="Pierre-Marie Boutet <pmboutet@example.com>"
 LABEL description="md2googleslides - Convert Markdown to Google Slides"
-LABEL version="0.5.2"
+LABEL version="0.5.3"
 LABEL org.opencontainers.image.source="https://github.com/pmboutet/md2googleslides"
 LABEL org.opencontainers.image.title="md2googleslides"
 LABEL org.opencontainers.image.description="Convert Markdown to Google Slides"
