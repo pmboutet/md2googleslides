@@ -15,12 +15,12 @@
 import markdownIt from 'markdown-it';
 import Token from 'markdown-it/lib/token';
 
-// Import plugins properly - some may not have proper ES module exports
-import * as attrs from 'markdown-it-attrs';
-import * as lazyHeaders from 'markdown-it-lazy-headers';
-import * as emoji from 'markdown-it-emoji';
-import * as expandTabs from 'markdown-it-expand-tabs';
-import * as video from 'markdown-it-video';
+// Use require for plugins to ensure proper loading since some don't have proper ES module exports
+const attrs = require('markdown-it-attrs');
+const lazyHeaders = require('markdown-it-lazy-headers');
+const emoji = require('markdown-it-emoji');
+const expandTabs = require('markdown-it-expand-tabs');
+const video = require('markdown-it-video');
 
 // Custom fence plugin implementation to replace markdown-it-fence
 function generatedImageFence(md: any, name: string, options: any) {
@@ -129,52 +129,13 @@ const mdOptions = {
   breaks: false,
 };
 
-// Handle plugins more carefully to avoid the apply error
-const parser = markdownIt(mdOptions);
-
-// Check if plugins are functions or objects with default exports
-if (typeof attrs === 'function') {
-  parser.use(attrs);
-} else if (attrs && typeof attrs.default === 'function') {
-  parser.use(attrs.default);
-} else if (attrs && typeof (attrs as any) === 'object') {
-  // Try to use it directly if it's an object
-  parser.use(attrs as any);
-}
-
-if (typeof lazyHeaders === 'function') {
-  parser.use(lazyHeaders);
-} else if (lazyHeaders && typeof lazyHeaders.default === 'function') {
-  parser.use(lazyHeaders.default);
-} else if (lazyHeaders && typeof (lazyHeaders as any) === 'object') {
-  parser.use(lazyHeaders as any);
-}
-
-if (typeof emoji === 'function') {
-  parser.use(emoji, {shortcuts: {}});
-} else if (emoji && typeof emoji.default === 'function') {
-  parser.use(emoji.default, {shortcuts: {}});
-} else if (emoji && typeof (emoji as any) === 'object') {
-  parser.use(emoji as any, {shortcuts: {}});
-}
-
-if (typeof expandTabs === 'function') {
-  parser.use(expandTabs, {tabWidth: 4});
-} else if (expandTabs && typeof expandTabs.default === 'function') {
-  parser.use(expandTabs.default, {tabWidth: 4});
-} else if (expandTabs && typeof (expandTabs as any) === 'object') {
-  parser.use(expandTabs as any, {tabWidth: 4});
-}
-
-parser.use(generatedImage);
-
-if (typeof video === 'function') {
-  parser.use(video, {youtube: {width: 640, height: 390}});
-} else if (video && typeof video.default === 'function') {
-  parser.use(video.default, {youtube: {width: 640, height: 390}});
-} else if (video && typeof (video as any) === 'object') {
-  parser.use(video as any, {youtube: {width: 640, height: 390}});
-}
+const parser = markdownIt(mdOptions)
+  .use(attrs)
+  .use(lazyHeaders)
+  .use(emoji, {shortcuts: {}})
+  .use(expandTabs, {tabWidth: 4})
+  .use(generatedImage)
+  .use(video, {youtube: {width: 640, height: 390}});
 
 function parseMarkdown(markdown: string): Token[] {
   return parser.parse(markdown, {});
