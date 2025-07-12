@@ -22,15 +22,15 @@ WORKDIR /app
 # Copier les fichiers de configuration des packages
 COPY package.json ./
 
-# Générer un nouveau package-lock.json et installer TOUTES les dépendances (y compris dev)
+# Générer un nouveau package-lock.json et installer TOUTES les dépendances (en ignorant les scripts)
 RUN npm install --package-lock-only && \
-    npm ci && \
+    npm ci --ignore-scripts && \
     npm cache clean --force
 
 # Copier le code source
 COPY . .
 
-# Compiler le TypeScript
+# Compiler le TypeScript manuellement
 RUN npm run compile
 
 # Stage de production
@@ -53,8 +53,8 @@ WORKDIR /app
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/package-lock.json ./
 
-# Installer seulement les dépendances de production
-RUN npm ci --omit=dev && npm cache clean --force
+# Installer seulement les dépendances de production (en ignorant les scripts)
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 # Copier le code compilé depuis le stage builder
 COPY --from=builder /app/lib ./lib
