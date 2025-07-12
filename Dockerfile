@@ -39,7 +39,8 @@ FROM node:20-alpine AS production
 # Installer les dépendances système runtime minimales
 RUN apk add --no-cache \
     vips \
-    libc6-compat
+    libc6-compat \
+    curl
 
 # Créer un utilisateur non-root pour la sécurité
 RUN addgroup -g 1001 -S nodejs && \
@@ -56,6 +57,12 @@ COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/bin ./bin
 
+# Copier les scripts
+COPY scripts/ ./scripts/
+
+# Rendre les scripts exécutables
+RUN chmod +x scripts/*.sh
+
 # Créer le répertoire pour les credentials Google
 RUN mkdir -p /home/md2gslides/.md2googleslides
 
@@ -70,6 +77,13 @@ USER md2gslides
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max-old-space-size=2048"
 
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD scripts/healthcheck.sh
+
+# Exposer le port (si nécessaire pour une API future)
+EXPOSE 3000
+
 # Point d'entrée
 ENTRYPOINT ["node", "bin/md2gslides.js"]
 
@@ -80,3 +94,7 @@ CMD ["--help"]
 LABEL maintainer="Pierre-Marie Boutet <pmboutet@example.com>"
 LABEL description="md2googleslides - Convert Markdown to Google Slides"
 LABEL version="0.5.2"
+LABEL org.opencontainers.image.source="https://github.com/pmboutet/md2googleslides"
+LABEL org.opencontainers.image.title="md2googleslides"
+LABEL org.opencontainers.image.description="Convert Markdown to Google Slides"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
