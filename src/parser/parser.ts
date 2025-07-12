@@ -14,30 +14,11 @@
 
 import markdownIt from 'markdown-it';
 import Token from 'markdown-it/lib/token';
-// @ts-ignore
 import attrs from 'markdown-it-attrs';
-// @ts-ignore
 import lazyHeaders from 'markdown-it-lazy-headers';
-// @ts-ignore
 import emoji from 'markdown-it-emoji';
-// @ts-ignore
 import expandTabs from 'markdown-it-expand-tabs';
-// @ts-ignore
 import video from 'markdown-it-video';
-
-// Helper function to normalize plugin exports
-function normalizePlugin(plugin: any): any {
-  if (typeof plugin === 'function') {
-    return plugin;
-  }
-  if (plugin && typeof plugin.default === 'function') {
-    return plugin.default;
-  }
-  if (plugin && typeof plugin.apply === 'function') {
-    return plugin;
-  }
-  throw new Error(`Invalid plugin format: ${typeof plugin}`);
-}
 
 // Custom fence plugin implementation to replace markdown-it-fence
 function generatedImageFence(md: any, name: string, options: any) {
@@ -148,12 +129,12 @@ const mdOptions = {
 };
 
 const parser = markdownIt(mdOptions)
-  .use(normalizePlugin(attrs))
-  .use(normalizePlugin(lazyHeaders))
-  .use(normalizePlugin(emoji), {shortcuts: {}})
-  .use(normalizePlugin(expandTabs), {tabWidth: 4})
+  .use(attrs)
+  .use(lazyHeaders)
+  .use(emoji, {shortcuts: {}})
+  .use(expandTabs, {tabWidth: 4})
   .use(generatedImage)
-  .use(normalizePlugin(video), {youtube: {width: 640, height: 390}});
+  .use(video, {youtube: {width: 640, height: 390}});
 
 function parseMarkdown(markdown: string): Token[] {
   return parser.parse(markdown, {});
