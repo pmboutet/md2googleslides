@@ -1,0 +1,156 @@
+name: Docker Build and Test
+
+on:
+  push:
+    branches: [ main, develop, 'fix/*' ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        npm ci --omit=dev
+        npm install --only=dev
+
+    - name: Run linting
+      run: npm run lint
+
+    - name: Run tests
+      run: npm test
+
+    - name: Build application
+      run: npm run compile
+
+  docker-build:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
+          type=sha
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        platforms: linux/amd64,linux/arm64
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+          VCS_REF=${{ github.sha }}
+          VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Test Docker image
+      run: |
+        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} --version
+
+  docker-security-scan:
+    needs: docker-build
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  deploy-staging:
+    needs: [docker-build, docker-security-scan]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    
+    steps:
+    - name: Deploy to staging
+      run: |
+        echo "Deploying ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} to staging"
+        # Ici vous pouvez ajouter vos scripts de déploiement staging
+
+  deploy-production:
+    needs: [docker-build, docker-security-scan]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    environment: production
+    
+    steps:
+    - name: Deploy to production
+      run: |
+        echo "Deploying ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }} to production"
+        # Ici vous pouvez ajouter vos scripts de déploiement production
+
+  cleanup:
+    needs: [docker-build]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Cleanup old packages
+      uses: actions/delete-package-versions@v4
+      with:
+        package-name: ${{ github.event.repository.name }}
+        package-type: 'container'
+        min-versions-to-keep: 10
+        delete-only-untagged-versions: 'true'

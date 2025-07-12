@@ -16,7 +16,7 @@
 
 /* eslint-disable no-console, @typescript-eslint/no-var-requires */
 
-require('babel-polyfill');
+require('core-js/stable');
 
 const Promise = require('promise');
 const fs = require('fs');
@@ -95,7 +95,7 @@ parser.addArgument(['-c', '--copy'], {
   required: false,
 });
 parser.addArgument(['--use-fileio'], {
-  help: 'Acknolwedge local and generated images are uploaded to https://file.io',
+  help: 'Acknowledge local and generated images are uploaded to https://file.io',
   action: 'storeTrue',
   dest: 'useFileio',
   required: false,
