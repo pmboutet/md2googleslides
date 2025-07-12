@@ -22,17 +22,14 @@ WORKDIR /app
 # Copier package.json seulement
 COPY package.json ./
 
-# Installer toutes les dépendances (cela génère automatiquement package-lock.json)
-RUN npm install && npm cache clean --force
+# Installer toutes les dépendances SANS exécuter les scripts
+RUN npm install --ignore-scripts && npm cache clean --force
 
 # Copier le code source
 COPY . .
 
-# Debug: voir la structure des fichiers
-RUN ls -la && ls -la src/ && cat tsconfig.json
-
-# Compiler le TypeScript manuellement sans scripts
-RUN npx tsc --version && npx tsc --showConfig
+# Maintenant compiler manuellement
+RUN npx tsc && npx babel --extensions '.ts,.js' --source-maps both -d lib/ src/
 
 # Stage de production
 FROM node:20-alpine AS production
@@ -55,7 +52,7 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/package-lock.json ./
 
 # Installer seulement les dépendances de production
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 # Copier le code compilé depuis le stage builder
 COPY --from=builder /app/lib ./lib
