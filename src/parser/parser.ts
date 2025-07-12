@@ -24,8 +24,6 @@ import emoji from 'markdown-it-emoji';
 import expandTabs from 'markdown-it-expand-tabs';
 // @ts-ignore
 import video from 'markdown-it-video';
-// @ts-ignore
-import customFence from 'markdown-it-fence';
 
 // Helper function to normalize plugin exports
 function normalizePlugin(plugin: any): any {
@@ -41,9 +39,102 @@ function normalizePlugin(plugin: any): any {
   throw new Error(`Invalid plugin format: ${typeof plugin}`);
 }
 
-function generatedImage(md: unknown): void {
-  const normalizedCustomFence = normalizePlugin(customFence);
-  return normalizedCustomFence(md, 'generated_image', {
+// Custom fence plugin implementation to replace markdown-it-fence
+function generatedImageFence(md: any, name: string, options: any) {
+  const marker = options.marker || '$';
+  const validate = options.validate || (() => true);
+  
+  function fence(state: any, start: number, end: number, silent: boolean) {
+    let pos, nextLine, markup, params, token, mem;
+    let haveEndMarker = false;
+    let len = state.src.length;
+
+    // Check out the first character quickly, which should filter out most of non-containers
+    if (marker !== state.src[start]) { return false; }
+
+    // Check out the rest of the marker string
+    for (pos = start + 1; pos <= 3; pos++) {
+      if (state.src[pos] !== marker) {
+        break;
+      }
+    }
+
+    markup = state.src.slice(start, pos);
+    params = state.src.slice(pos, state.eMarks[start]).trim();
+
+    // Since start is found, we can report success here in validation mode
+    if (silent) { return true; }
+
+    // Search for end marker
+    nextLine = start;
+
+    for (;;) {
+      nextLine++;
+      if (nextLine >= end) {
+        // unclosed block should be autoclosed by end of document.
+        break;
+      }
+
+      pos = state.bMarks[nextLine] + state.tShift[nextLine];
+      let max = state.eMarks[nextLine];
+
+      if (pos < max && state.sCount[nextLine] < state.blkIndent) {
+        // non-empty line with negative indent should stop the list
+        break;
+      }
+
+      if (state.src.slice(pos, max).trim().slice(0, markup.length) === markup) {
+        // closing fence marker found
+        mem = state.src.slice(pos, max);
+        pos += markup.length;
+        if (pos <= max) {
+          pos = state.skipSpaces(pos);
+          if (pos < max) {
+            if (mem.slice(markup.length).trim() !== '') {
+              continue;
+            }
+          }
+        }
+        // make sure tail has spaces only
+        pos = state.skipSpaces(pos);
+        if (pos < max) {
+          continue;
+        }
+
+        // found!
+        haveEndMarker = true;
+        break;
+      }
+    }
+
+    const oldParent = state.parentType;
+    const oldLineMax = state.lineMax;
+    state.parentType = name;
+
+    // this will prevent lazy continuations from ever going past our end marker
+    state.lineMax = nextLine;
+
+    token = state.push(name, 'div', 0);
+    token.markup = markup;
+    token.block = true;
+    token.info = params;
+    token.map = [start, nextLine];
+    token.content = state.src.slice(state.bMarks[start + 1], state.bMarks[nextLine - (haveEndMarker ? 1 : 0)]);
+
+    state.parentType = oldParent;
+    state.lineMax = oldLineMax;
+    state.line = nextLine + (haveEndMarker ? 1 : 0);
+
+    return true;
+  }
+
+  md.block.ruler.before('fence', name, fence, {
+    alt: ['paragraph', 'reference', 'blockquote', 'list']
+  });
+}
+
+function generatedImage(md: any): void {
+  return generatedImageFence(md, 'generated_image', {
     marker: '$',
     validate: () => true,
   });
