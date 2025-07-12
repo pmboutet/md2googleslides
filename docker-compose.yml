@@ -5,22 +5,23 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - BUILD_DATE=${BUILD_DATE:-}
+        - VCS_REF=${VCS_REF:-}
+        - VERSION=${VERSION:-0.5.2}
     image: md2googleslides:latest
     container_name: md2googleslides
     volumes:
-      # Monter le répertoire de travail
-      - ./workspace:/workspace:ro
-      # Monter les credentials Google
-      - ~/.md2googleslides:/home/md2gslides/.md2googleslides:ro
-      # Monter un répertoire pour les outputs (si nécessaire)
-      - ./output:/output
+      # Monter le répertoire de travail pour les fichiers d'entrée/sortie
+      - ./workspace:/workspace
+      # Monter le répertoire de credentials Google (optionnel)
+      - ./credentials:/home/md2gslides/.md2googleslides:ro
+    working_dir: /workspace
     environment:
       - NODE_ENV=production
       - NODE_OPTIONS=--max-old-space-size=2048
-    # Commande par défaut (peut être surchargée)
+    # Commande par défaut - peut être surchargée
     command: ["--help"]
-    # Redémarrage automatique en cas d'erreur
-    restart: unless-stopped
     # Limites de ressources
     deploy:
       resources:
@@ -30,22 +31,22 @@ services:
         reservations:
           memory: 512M
           cpus: '0.5'
-
-  # Service pour le développement avec hot reload
+    
+  # Service pour le développement et les tests
   md2googleslides-dev:
     build:
       context: .
       dockerfile: Dockerfile
-      target: development
+      target: builder
     image: md2googleslides:dev
     container_name: md2googleslides-dev
     volumes:
       - .:/app
-      - ~/.md2googleslides:/home/md2gslides/.md2googleslides:ro
       - /app/node_modules
+    working_dir: /app
     environment:
       - NODE_ENV=development
-    command: ["npm", "run", "dev"]
+    command: ["npm", "test"]
     profiles:
       - dev
 
@@ -54,6 +55,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: builder
     image: md2googleslides:test
     container_name: md2googleslides-test
     volumes:
@@ -64,12 +66,12 @@ services:
     profiles:
       - test
 
-# Réseaux
+# Réseau par défaut
 networks:
   default:
     name: md2googleslides-network
 
-# Volumes nommés pour la persistance
+# Volumes pour la persistance des données
 volumes:
   workspace:
     driver: local
