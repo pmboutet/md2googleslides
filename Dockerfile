@@ -28,8 +28,11 @@ RUN npm install && npm cache clean --force
 # Copier le code source
 COPY . .
 
-# Compiler le TypeScript (maintenant que toutes les dépendances sont installées)
-RUN npm run compile
+# Debug: voir la structure des fichiers
+RUN ls -la && ls -la src/ && cat tsconfig.json
+
+# Compiler le TypeScript manuellement sans scripts
+RUN npx tsc --version && npx tsc --showConfig
 
 # Stage de production
 FROM node:20-alpine AS production
