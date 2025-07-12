@@ -5,9 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2025-07-12
+
+### 🐛 Fixed
+- **Docker build failure**: Resolved "plugin.apply is not a function" error
+- **Plugin compatibility**: Fixed markdown-it v14.1.0 compatibility issues  
+- **Custom fence implementation**: Replaced obsolete `markdown-it-fence` with modern custom implementation
+- **Plugin normalization**: Added robust plugin loading mechanism for different export formats
+
+### 🗑️ Removed
+- **`markdown-it-fence`**: Removed obsolete dependency (last updated 7 years ago)
+
+### 🔧 Technical Details
+- Implemented custom fence plugin compatible with markdown-it v14.1.0
+- Added `normalizePlugin()` function to handle various plugin export formats
+- Maintained backward compatibility for `generated_image` blocks
+- Enhanced error handling in plugin loading process
+
+### 📄 Documentation
+- **DOCKER_BUILD_FIX.md**: Comprehensive documentation of the fix
+- Detailed migration and testing instructions
+- Clear explanation of technical changes
+
+### 🧪 Testing
+To verify the fix:
+```bash
+docker build -t md2googleslides:latest .
+docker run --rm md2googleslides:latest --help
+```
+
 ## [0.5.2] - 2025-07-11
 
-### 🚀 Added
+### 🆕 Added
 - **Docker support**: Complete containerization with optimized Dockerfile
 - **Docker Compose**: Development and production configurations
 - **Makefile**: Automation tools for build, test, and deployment tasks
@@ -99,6 +128,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## Migration Guide
+
+### From 0.5.2 to 0.5.3
+
+This is a patch release that fixes Docker build issues. No breaking changes.
+
+#### Quick Update
+```bash
+# Update dependencies
+npm install
+
+# Rebuild
+npm run compile
+
+# Test Docker build
+docker build -t md2googleslides:latest .
+```
 
 ### From 0.5.1 to 0.5.2
 
