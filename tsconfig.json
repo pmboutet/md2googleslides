@@ -4,10 +4,17 @@
     "rootDir": ".",
     "outDir": "lib",
     "esModuleInterop": true,
-    "noEmit": false
+    "allowSyntheticDefaultImports": true,
+    "noEmit": false,
+    "skipLibCheck": true,
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ]
   },
   "include": [
     "src/**/*.ts",
+    "src/types/**/*.d.ts",
     "test/**/*.ts"
   ]
 }
