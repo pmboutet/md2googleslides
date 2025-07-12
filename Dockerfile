@@ -22,9 +22,9 @@ WORKDIR /app
 # Copier les fichiers de configuration des packages
 COPY package.json ./
 
-# Générer un nouveau package-lock.json et installer les dépendances
+# Générer un nouveau package-lock.json et installer TOUTES les dépendances (y compris dev)
 RUN npm install --package-lock-only && \
-    npm ci --omit=dev && \
+    npm ci && \
     npm cache clean --force
 
 # Copier le code source
@@ -49,11 +49,11 @@ RUN addgroup -g 1001 -S nodejs && \
 # Définir le répertoire de travail
 WORKDIR /app
 
-# Copier les dépendances depuis le stage builder
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./
+# Copier package.json et installer seulement les dépendances de production
+COPY package.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 
-# Copier le code compilé
+# Copier le code compilé depuis le stage builder
 COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/bin ./bin
 
