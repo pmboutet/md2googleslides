@@ -19,16 +19,16 @@ RUN apk add --no-cache \
 # Définir le répertoire de travail
 WORKDIR /app
 
-# Copier package.json ET package-lock.json s'il existe
-COPY package*.json ./
+# Copier package.json seulement
+COPY package.json ./
 
-# Installer toutes les dépendances (incluant dev pour compilation)
-RUN npm ci && npm cache clean --force
+# Installer toutes les dépendances (cela génère automatiquement package-lock.json)
+RUN npm install && npm cache clean --force
 
 # Copier le code source
 COPY . .
 
-# Compiler le TypeScript
+# Compiler le TypeScript (maintenant que toutes les dépendances sont installées)
 RUN npm run compile
 
 # Stage de production
