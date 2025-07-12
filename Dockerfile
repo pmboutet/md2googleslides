@@ -49,8 +49,11 @@ RUN addgroup -g 1001 -S nodejs && \
 # Définir le répertoire de travail
 WORKDIR /app
 
-# Copier package.json et installer seulement les dépendances de production
-COPY package.json ./
+# Copier package.json et package-lock.json depuis le stage builder
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/package-lock.json ./
+
+# Installer seulement les dépendances de production
 RUN npm ci --omit=dev && npm cache clean --force
 
 # Copier le code compilé depuis le stage builder
