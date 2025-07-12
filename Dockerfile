@@ -28,15 +28,9 @@ RUN npm install --ignore-scripts && npm cache clean --force
 # Copier le code source
 COPY . .
 
-# Remplacer babel-polyfill par core-js dans le fichier bin
-RUN sed -i "s/require('babel-polyfill')/require('core-js')/" bin/md2gslides.js 2>/dev/null || true
-
 # Compiler avec TypeScript en mode permissif (continue même si erreurs)
 RUN (npx tsc --skipLibCheck --noImplicitAny false || echo "TypeScript compilation completed with warnings") && \
     npx babel --extensions '.ts,.js' --source-maps both -d lib/ src/
-
-# Remplacer babel-polyfill par core-js dans les fichiers compilés
-RUN find lib/ bin/ -name "*.js" -type f -exec sed -i "s/require('babel-polyfill')/require('core-js')/" {} \; 2>/dev/null || true
 
 # Stage de production
 FROM node:20-alpine AS production
@@ -58,8 +52,10 @@ WORKDIR /app
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/package-lock.json ./
 
-# Installer seulement les dépendances de production
-RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+# Installer seulement les dépendances de production + babel-polyfill manquant
+RUN npm ci --omit=dev --ignore-scripts && \
+    npm install babel-polyfill --save --ignore-scripts && \
+    npm cache clean --force
 
 # Copier le code compilé depuis le stage builder
 COPY --from=builder /app/lib ./lib
