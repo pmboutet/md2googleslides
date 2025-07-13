@@ -2,7 +2,7 @@
 
 Generate Google Slides from markdown & HTML. Run from the command line or embed in another application.
 
-🚀 **Version 0.5.2** - Mise à jour majeure avec support Docker et dépendances sécurisées !
+🚀 **Version 0.5.3** - Mise à jour majeure avec support Docker et dépendances sécurisées !
 
 ## ✨ Nouveautés de cette version
 
