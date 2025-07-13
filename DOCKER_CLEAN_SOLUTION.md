@@ -29,7 +29,7 @@ const attrs = require('markdown-it-attrs');
 
 ### 4. **Dockerfile avec contournements**
 **Problème** : `--ignore-scripts` et compilation permissive
-**Solution** : Build standard avec `npm run compile`
+**Solution** : Utiliser `npm ci --ignore-scripts` suivi de `npm run compile`
 
 ## 🔧 **Changements techniques**
 
@@ -46,7 +46,7 @@ RUN npm install --ignore-scripts
 ### **Après (solution propre)**
 ```dockerfile
 # Build standard sans contournements
-RUN npm ci
+RUN npm ci --ignore-scripts
 RUN npm run compile
 ```
 
@@ -68,7 +68,7 @@ RUN npm run compile
 - ✅ Compatibilité gts maintenue
 
 ### 4. **`Dockerfile`**
-- ✅ Suppression des flags `--ignore-scripts`
+- ✅ Installation avec `npm ci --ignore-scripts`
 - ✅ Build TypeScript standard
 - ✅ Gestion d'erreurs appropriée
 
