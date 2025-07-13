@@ -100,6 +100,12 @@ parser.addArgument(['--use-fileio'], {
   dest: 'useFileio',
   required: false,
 });
+parser.addArgument(['-d', '--dry-run'], {
+  help: 'Parse input without calling Google APIs',
+  action: 'storeTrue',
+  dest: 'dryRun',
+  required: false,
+});
 
 const args = parser.parseArgs();
 
@@ -228,9 +234,28 @@ function displayResults(id) {
     opener(url);
   }
 }
-authorizeUser()
-  .then(buildSlideGenerator)
-  .then(eraseIfNeeded)
-  .then(generateSlides)
-  .then(displayResults)
-  .catch(handleError);
+if (args.dryRun) {
+  try {
+    let source;
+    if (args.file) {
+      source = path.resolve(args.file);
+      process.chdir(path.dirname(source));
+    } else {
+      source = 0;
+    }
+    const input = fs.readFileSync(source, {encoding: 'UTF-8'});
+    const css = loadCss(args.style);
+    require('../lib/parser/extract_slides').default(input, css);
+    console.log('Dry run successful - no slides created.');
+  } catch (err) {
+    handleError(err);
+    process.exitCode = 1;
+  }
+} else {
+  authorizeUser()
+    .then(buildSlideGenerator)
+    .then(eraseIfNeeded)
+    .then(generateSlides)
+    .then(displayResults)
+    .catch(handleError);
+}
