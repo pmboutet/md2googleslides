@@ -23,8 +23,8 @@ WORKDIR /app
 COPY package.json ./
 COPY yarn.lock* package-lock.json* ./
 
-# Install dependencies with proper build scripts
-RUN npm ci
+# Install dependencies without running lifecycle scripts
+RUN npm ci --ignore-scripts
 
 # Copy source code
 COPY . .
