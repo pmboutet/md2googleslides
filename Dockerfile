@@ -52,8 +52,8 @@ WORKDIR /app
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/package-lock.json* ./
 
-# Install only production dependencies
-RUN npm ci --omit=dev && npm cache clean --force
+# Install only production dependencies without running lifecycle scripts
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 # Copy compiled code from builder stage
 COPY --from=builder /app/lib ./lib
