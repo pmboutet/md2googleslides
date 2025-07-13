@@ -14,8 +14,9 @@
 
 import Debug from 'debug';
 import extend from 'extend';
-import Token from 'markdown-it/lib/token';
-import parse5, {Element} from 'parse5';
+type Token = any;
+import * as parse5 from 'parse5';
+import {Element} from 'parse5/dist/tree-adapters/default';
 import fileUrl from 'file-url';
 import {SlideDefinition, StyleDefinition} from '../slides';
 import parseMarkdown from './parser';
@@ -45,7 +46,7 @@ function attr(token: Token, name: string): string | undefined {
   if (!token.attrs) {
     return undefined;
   }
-  const attr = token.attrs.find(a => a[0] === name);
+  const attr = token.attrs.find((a: [string, string]) => a[0] === name);
   if (!attr) {
     return undefined;
   }
@@ -87,7 +88,7 @@ function applyTokenStyle(
   if (!token.attrs) {
     return style;
   }
-  const styleAttr = token.attrs.find(attr => attr[0] === 'style');
+  const styleAttr = token.attrs.find((attr: [string, string]) => attr[0] === 'style');
   if (styleAttr === undefined) {
     return style;
   }
@@ -119,7 +120,7 @@ inlineTokenRules['inline'] = (token, context) => {
 
 inlineTokenRules['html_inline'] = (token, context) => {
   const fragment = context.inlineHtmlContext
-    ? parse5.parseFragment(context.inlineHtmlContext, token.content)
+    ? parse5.parseFragment(context.inlineHtmlContext as any, token.content)
     : parse5.parseFragment(token.content);
   if (fragment.childNodes && fragment.childNodes.length) {
     const node = fragment.childNodes[0] as Element;

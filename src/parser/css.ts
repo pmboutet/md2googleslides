@@ -47,7 +47,7 @@ function parseColorString(hexString: string): Color | undefined {
 }
 
 function normalizeKeys(css: CssRule): CssRule {
-  return _.mapKeys(css, (value, key) => _.camelCase(key));
+  return _.mapKeys(css, (value: string, key: string) => _.camelCase(key));
 }
 
 export function parseStyleSheet(stylesheet: string | undefined): Stylesheet {

@@ -1,4 +1,4 @@
-# Declaration files for CommonJS modules without proper TypeScript declarations
+// Declaration files for CommonJS modules without proper TypeScript declarations
 declare module 'markdown-it-attrs';
 declare module 'markdown-it-lazy-headers'; 
 declare module 'markdown-it-emoji';

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import markdownIt from 'markdown-it';
-import Token from 'markdown-it/lib/token';
+type Token = any;
 
 // Use require for plugins to ensure proper loading since some don't have proper ES module exports
 const attrs = require('markdown-it-attrs');

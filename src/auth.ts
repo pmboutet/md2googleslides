@@ -15,8 +15,8 @@
 import Debug from 'debug';
 import {OAuth2Client, Credentials} from 'google-auth-library';
 import path from 'path';
-import mkdirp from 'mkdirp';
-import {Low} from 'lowdb';
+import {sync as mkdirpSync} from 'mkdirp';
+import {LowSync} from 'lowdb';
 import {JSONFileSync} from 'lowdb/node';
 
 const debug = Debug('md2gslides');
@@ -56,7 +56,7 @@ interface CredentialsDb {
  */
 export default class UserAuthorizer {
   private redirectUrl = 'urn:ietf:wg:oauth:2.0:oob';
-  private db: Low<CredentialsDb>;
+  private db: LowSync<CredentialsDb>;
   private clientId: string;
   private clientSecret: string;
   private prompt: UserPrompt;
@@ -128,18 +128,18 @@ export default class UserAuthorizer {
    * @returns {Low} database instance
    * @private
    */
-  private static initDbSync(filePath?: string): Low<CredentialsDb> {
+  private static initDbSync(filePath?: string): LowSync<CredentialsDb> {
     let adapter: JSONFileSync<CredentialsDb>;
     if (filePath) {
       const parentDir = path.dirname(filePath);
-      mkdirp.sync(parentDir);
+      mkdirpSync(parentDir);
       adapter = new JSONFileSync<CredentialsDb>(filePath);
     } else {
       // For in-memory storage, we'll use a temporary file
       adapter = new JSONFileSync<CredentialsDb>('/tmp/md2gslides-memory.json');
     }
     
-    const db = new Low(adapter, {} as CredentialsDb);
+    const db = new LowSync(adapter, {} as CredentialsDb);
     db.read();
     
     // Initialize data if it doesn't exist

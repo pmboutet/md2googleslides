@@ -228,7 +228,7 @@ export default class GenericLayout {
       };
       assert(request.updateTextStyle?.style);
       request.updateTextStyle.fields = this.computeShallowFieldMask(
-        request.updateTextStyle.style
+        request.updateTextStyle.style as Record<string, unknown>
       );
       if (request.updateTextStyle.fields.length) {
         requests.push(request); // Only push if at least one style set
@@ -292,7 +292,7 @@ export default class GenericLayout {
     requests: SlidesV1.Schema$Request[]
   ): void {
     // TODO - Fix weird cast
-    const layer = (Layout as (s: string) => Layout.PackingSmith)('left-right'); // TODO - Configurable?
+    const layer = (Layout as any)('left-right'); // TODO - Configurable?
     for (const image of images) {
       debug('Slide #%d: adding inline image %s', this.slide.index, image.url);
       layer.addItem({
@@ -500,10 +500,10 @@ export default class GenericLayout {
     };
   }
 
-  protected computeShallowFieldMask<T>(object: T): string {
-    const fields = [];
+  protected computeShallowFieldMask(object: Record<string, unknown>): string {
+    const fields: string[] = [];
     for (const field of Object.keys(object)) {
-      if (object[field as keyof T] !== undefined) {
+      if ((object as Record<string, unknown>)[field] !== undefined) {
         fields.push(field);
       }
     }
