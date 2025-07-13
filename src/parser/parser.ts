@@ -18,7 +18,7 @@ import Token from 'markdown-it/lib/token';
 // Use require for plugins to ensure proper loading since some don't have proper ES module exports
 const attrs = require('markdown-it-attrs');
 const lazyHeaders = require('markdown-it-lazy-headers');
-const emoji = require('markdown-it-emoji');
+const { light: emoji } = require('markdown-it-emoji');
 const expandTabs = require('markdown-it-expand-tabs');
 const video = require('markdown-it-video');
 
