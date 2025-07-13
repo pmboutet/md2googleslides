@@ -14,8 +14,7 @@
 
 import Debug from 'debug';
 import fs from 'fs';
-import {request} from 'undici';
-import FormData from 'form-data';
+import {request, FormData} from 'undici';
 
 const debug = Debug('md2gslides');
 
@@ -29,24 +28,23 @@ const debug = Debug('md2gslides');
  */
 async function uploadLocalImage(filePath: string): Promise<string> {
   debug('Registering file %s', filePath);
-  
+
   try {
     const form = new FormData();
     form.append('file', fs.createReadStream(filePath));
-    
+
     const response = await request('https://file.io?expires=1h', {
       method: 'POST',
       body: form,
-      headers: form.getHeaders(),
     });
-    
+
     const responseData: any = await response.body.json();
-    
+
     if (!responseData.success) {
       debug('Unable to upload file: %O', responseData);
       throw new Error(`Upload failed: ${JSON.stringify(responseData)}`);
     }
-    
+
     debug('Temporary link: %s', responseData.link);
     return responseData.link;
   } catch (error: unknown) {

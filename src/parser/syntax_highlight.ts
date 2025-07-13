@@ -33,7 +33,9 @@ function isTextNode(node: any): node is {type: string; value: string} {
 
 // Type guard
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function isElementNode(node: any): node is {type: string; tagName: string; properties?: any; children?: any[]} {
+function isElementNode(
+  node: any
+): node is {type: string; tagName: string; properties?: any; children?: any[]} {
   return node.type === 'element';
 }
 

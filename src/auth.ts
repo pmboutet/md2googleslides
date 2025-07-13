@@ -138,16 +138,16 @@ export default class UserAuthorizer {
       // For in-memory storage, we'll use a temporary file
       adapter = new JSONFileSync<CredentialsDb>('/tmp/md2gslides-memory.json');
     }
-    
+
     const db = new LowSync(adapter, {} as CredentialsDb);
     db.read();
-    
+
     // Initialize data if it doesn't exist
     if (!db.data) {
       db.data = {};
       db.write();
     }
-    
+
     return db;
   }
 }
