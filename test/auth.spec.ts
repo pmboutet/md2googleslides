@@ -38,6 +38,27 @@ function stubTokenRequestError(): void {
 }
 
 describe('UserAuthorizer', () => {
+  const savedProxyEnv: Record<string, string | undefined> = {
+    http_proxy: process.env.http_proxy,
+    HTTP_PROXY: process.env.HTTP_PROXY,
+    https_proxy: process.env.https_proxy,
+    HTTPS_PROXY: process.env.HTTPS_PROXY,
+  };
+
+  before(() => {
+    delete process.env.http_proxy;
+    delete process.env.HTTP_PROXY;
+    delete process.env.https_proxy;
+    delete process.env.HTTPS_PROXY;
+  });
+
+  after(() => {
+    Object.entries(savedProxyEnv).forEach(([key, value]) => {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    });
+  });
+
   beforeEach(() => {
     mockfs({
       '/tmp/tokens.json': JSON.stringify({

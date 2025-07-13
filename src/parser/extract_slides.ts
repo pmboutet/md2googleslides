@@ -88,7 +88,9 @@ function applyTokenStyle(
   if (!token.attrs) {
     return style;
   }
-  const styleAttr = token.attrs.find((attr: [string, string]) => attr[0] === 'style');
+  const styleAttr = token.attrs.find(
+    (attr: [string, string]) => attr[0] === 'style'
+  );
   if (styleAttr === undefined) {
     return style;
   }
