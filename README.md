@@ -119,6 +119,14 @@ make security          # Audit de sécurité
 make ci                # Pipeline CI/CD local
 ```
 
+### Rebuild rapide
+Après avoir mis à jour les dépendances, recompilez le projet avec :
+
+```bash
+npm install
+npm run compile
+```
+
 ## 📝 Syntaxe Markdown supportée
 
 ### Slides de base
