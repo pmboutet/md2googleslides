@@ -75,6 +75,7 @@ describe('UserAuthorizer', () => {
           refresh_token: '1/abc',
         },
       }),
+      node_modules: mockfs.load('node_modules'),
     });
   });
 
