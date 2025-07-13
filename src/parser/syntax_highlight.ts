@@ -12,31 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import low from 'lowlight';
+import {common, createLowlight} from 'lowlight';
 import {Context} from './env';
 import {CssRule, updateStyleDefinition} from './css';
 import {StyleDefinition} from '../slides';
 
-type RuleFn = (node: lowlight.HastNode, context: Context) => void;
+type RuleFn = (node: any, context: Context) => void;
 interface Rules {
   [key: string]: RuleFn;
 }
 
 const hastRules: Rules = {};
+const low = createLowlight(common);
 
 // Type guard
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function isTextNode(node: lowlight.HastNode): node is lowlight.AST.Text {
+function isTextNode(node: any): node is {type: string; value: string} {
   return node.type === 'text';
 }
 
 // Type guard
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function isElementNode(node: any): node is lowlight.AST.Element {
+function isElementNode(node: any): node is {type: string; tagName: string; properties?: any; children?: any[]} {
   return node.type === 'element';
 }
 
-function processHastNode(node: lowlight.HastNode, context: Context): void {
+function processHastNode(node: any, context: Context): void {
   if (isTextNode(node)) {
     // For code blocks, replace line feeds with vertical tabs to keep
     // the block as a single paragraph. This avoid the extra vertical
@@ -55,7 +56,7 @@ function processHastNode(node: lowlight.HastNode, context: Context): void {
 }
 
 function extractStyle(
-  node: lowlight.HastNode,
+  node: any,
   cssRules: {[key: string]: CssRule}
 ): StyleDefinition {
   let style = {};
@@ -80,7 +81,7 @@ hastRules['span'] = (node, context) => {
   const style = extractStyle(node, context.css ?? {});
   context.startStyle(style);
   for (const childNode of node.children || []) {
-    processHastNode(childNode as lowlight.HastNode, context);
+    processHastNode(childNode as any, context);
   }
   context.endStyle();
 };

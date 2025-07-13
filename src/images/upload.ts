@@ -40,7 +40,7 @@ async function uploadLocalImage(filePath: string): Promise<string> {
       headers: form.getHeaders(),
     });
     
-    const responseData = await response.body.json();
+    const responseData: any = await response.body.json();
     
     if (!responseData.success) {
       debug('Unable to upload file: %O', responseData);
@@ -49,7 +49,7 @@ async function uploadLocalImage(filePath: string): Promise<string> {
     
     debug('Temporary link: %s', responseData.link);
     return responseData.link;
-  } catch (error) {
+  } catch (error: unknown) {
     debug('Error uploading file: %O', error);
     throw error;
   }
