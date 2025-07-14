@@ -16,7 +16,7 @@ services:
       - ./workspace:/workspace
       # Monter le répertoire de credentials Google (optionnel)
       - ./credentials:/home/md2gslides/.md2googleslides:ro
-    working_dir: /workspace
+    working_dir: /app
     environment:
       - NODE_ENV=production
       - NODE_OPTIONS=--max-old-space-size=2048
