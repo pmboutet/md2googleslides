@@ -15,12 +15,15 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy package.json and install dependencies
+# Copy package.json and install dependencies WITHOUT running scripts
 COPY package.json ./
-RUN npm install --omit=dev
+RUN npm install --omit=dev --ignore-scripts
 
-# Copy all source files
+# Copy all source files (including pre-compiled lib/ if it exists)
 COPY . .
+
+# Install express and multer directly if missing from lockfile
+RUN npm install express@^4.21.2 multer@^1.4.5-lts.1 --save --ignore-scripts
 
 # Create necessary directories
 RUN mkdir -p /tmp/uploads /app/shared /home/md2gslides/.md2googleslides
@@ -42,8 +45,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 # Expose port
 EXPOSE 3000
 
-# Start server (fallback to node if npm fails)
-CMD ["sh", "-c", "node server.js"]
+# Start server directly
+CMD ["node", "server.js"]
 
 # Labels
 LABEL maintainer="Pierre-Marie Boutet <pmboutet@example.com>"
