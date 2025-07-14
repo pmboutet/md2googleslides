@@ -21,10 +21,9 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json ./
-COPY yarn.lock* package-lock.json* ./
 
-# Install dependencies without running lifecycle scripts
-RUN npm ci --ignore-scripts
+# Install dependencies (this will generate a new package-lock.json)
+RUN npm install --no-optional
 
 # Copy source code
 COPY . .
@@ -50,9 +49,9 @@ WORKDIR /app
 
 # Copy package files from builder stage
 COPY --from=builder /app/package.json ./
-COPY --from=builder /app/package-lock.json* ./
+COPY --from=builder /app/package-lock.json ./
 
-# Install only production dependencies without running lifecycle scripts
+# Install only production dependencies
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 # Copy compiled code from builder stage
