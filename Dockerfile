@@ -59,18 +59,22 @@ RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/bin ./bin
 
+# Copy server file
+COPY --from=builder /app/server.js ./
+
 # Copy scripts
 COPY scripts/ ./scripts/
 
 # Make scripts executable
 RUN chmod +x scripts/*.sh
 
-# Create directory for Google credentials
-RUN mkdir -p /home/md2gslides/.md2googleslides
+# Create directory for Google credentials and temp files
+RUN mkdir -p /home/md2gslides/.md2googleslides /tmp/uploads
 
 # Change ownership to non-root user
 RUN chown -R md2gslides:nodejs /app && \
-    chown -R md2gslides:nodejs /home/md2gslides
+    chown -R md2gslides:nodejs /home/md2gslides && \
+    chown -R md2gslides:nodejs /tmp/uploads
 
 # Switch to non-root user
 USER md2gslides
@@ -78,25 +82,23 @@ USER md2gslides
 # Environment variables
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max-old-space-size=2048"
+ENV PORT=3000
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD scripts/healthcheck.sh
+# Healthcheck for HTTP server mode
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
 
-# Expose port (if needed for future API)
+# Expose port for HTTP server
 EXPOSE 3000
 
-# Entry point
-ENTRYPOINT ["node", "bin/md2gslides.js"]
-
-# Default command
-CMD ["--help"]
+# Default to HTTP server mode
+CMD ["npm", "start"]
 
 # Documentation labels
 LABEL maintainer="Pierre-Marie Boutet <pmboutet@example.com>"
-LABEL description="md2googleslides - Convert Markdown to Google Slides"
+LABEL description="md2googleslides - Convert Markdown to Google Slides (HTTP API)"
 LABEL version="0.5.3"
 LABEL org.opencontainers.image.source="https://github.com/pmboutet/md2googleslides"
 LABEL org.opencontainers.image.title="md2googleslides"
-LABEL org.opencontainers.image.description="Convert Markdown to Google Slides"
+LABEL org.opencontainers.image.description="Convert Markdown to Google Slides with HTTP API"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
