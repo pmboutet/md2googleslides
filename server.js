@@ -2,7 +2,6 @@ const express = require('express');
 const { exec } = require('child_process');
 const multer = require('multer');
 const fs = require('fs');
-const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -11,7 +10,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Configure multer for file uploads
-const upload = multer({ 
+const upload = multer({
     dest: '/tmp/uploads/',
     limits: {
         fileSize: 50 * 1024 * 1024 // 50MB limit
@@ -20,9 +19,9 @@ const upload = multer({
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-    res.json({ 
-        status: 'healthy', 
-        service: 'md2slides-server', 
+    res.json({
+        status: 'healthy',
+        service: 'md2slides-server',
         timestamp: new Date().toISOString(),
         version: require('./package.json').version
     });
@@ -39,21 +38,21 @@ app.post('/convert', upload.single('markdown'), (req, res) => {
 
     // Build command
     let command = `node /app/bin/md2gslides.js "${markdownPath}"`;
-    
+
     if (title) command += ` --title "${title}"`;
     if (user) command += ` --user "${user}"`;
     if (style) command += ` --style "${style}"`;
     if (appendId) command += ` --append "${appendId}"`;
     if (erase === 'true') command += ' --erase';
     if (dryRun === 'true') command += ' --dry-run';
-    
+
     // Add no-browser flag for headless operation
     command += ' --no-browser';
 
     console.log('Executing command:', command);
 
     // Execute md2gslides
-    exec(command, { 
+    exec(command, {
         cwd: '/app',
         timeout: 300000, // 5 minutes timeout
         env: { ...process.env, GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_CREDENTIALS_JSON ? '/tmp/google-credentials.json' : undefined }
@@ -63,8 +62,8 @@ app.post('/convert', upload.single('markdown'), (req, res) => {
 
         if (error) {
             console.error('Conversion error:', error);
-            return res.status(500).json({ 
-                error: 'Conversion failed', 
+            return res.status(500).json({
+                error: 'Conversion failed',
                 details: stderr || error.message,
                 command: command.replace(/--user "[^"]*"/, '--user "[REDACTED]"') // Hide user email
             });
@@ -74,8 +73,8 @@ app.post('/convert', upload.single('markdown'), (req, res) => {
         const urlMatch = stdout.match(/https:\/\/docs\.google\.com\/presentation\/d\/[a-zA-Z0-9-_]+/);
         const presentationUrl = urlMatch ? urlMatch[0] : null;
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             output: stdout,
             presentationUrl: presentationUrl,
             message: 'Conversion completed successfully'
@@ -93,7 +92,7 @@ app.post('/convert-text', (req, res) => {
 
     // Create temporary file
     const tempFile = `/tmp/markdown-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.md`;
-    
+
     try {
         fs.writeFileSync(tempFile, markdown);
     } catch (err) {
@@ -102,20 +101,20 @@ app.post('/convert-text', (req, res) => {
 
     // Build command
     let command = `node /app/bin/md2gslides.js "${tempFile}"`;
-    
+
     if (title) command += ` --title "${title}"`;
     if (user) command += ` --user "${user}"`;
     if (style) command += ` --style "${style}"`;
     if (appendId) command += ` --append "${appendId}"`;
     if (erase === 'true') command += ' --erase';
     if (dryRun === 'true') command += ' --dry-run';
-    
+
     command += ' --no-browser';
 
     console.log('Executing command:', command);
 
     // Execute md2gslides
-    exec(command, { 
+    exec(command, {
         cwd: '/app',
         timeout: 300000, // 5 minutes timeout
         env: { ...process.env, GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_CREDENTIALS_JSON ? '/tmp/google-credentials.json' : undefined }
@@ -125,8 +124,8 @@ app.post('/convert-text', (req, res) => {
 
         if (error) {
             console.error('Conversion error:', error);
-            return res.status(500).json({ 
-                error: 'Conversion failed', 
+            return res.status(500).json({
+                error: 'Conversion failed',
                 details: stderr || error.message,
                 command: command.replace(/--user "[^"]*"/, '--user "[REDACTED]"') // Hide user email
             });
@@ -136,8 +135,8 @@ app.post('/convert-text', (req, res) => {
         const urlMatch = stdout.match(/https:\/\/docs\.google\.com\/presentation\/d\/[a-zA-Z0-9-_]+/);
         const presentationUrl = urlMatch ? urlMatch[0] : null;
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             output: stdout,
             presentationUrl: presentationUrl,
             message: 'Conversion completed successfully'
@@ -200,7 +199,7 @@ app.get('/', (req, res) => {
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
     console.error('Server error:', err);
     res.status(500).json({ error: 'Internal server error' });
 });
@@ -226,12 +225,15 @@ app.listen(port, '0.0.0.0', () => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
     console.log('Received SIGTERM, shutting down gracefully');
+    // eslint-disable-next-line n/no-process-exit
     process.exit(0);
 });
 
 process.on('SIGINT', () => {
     console.log('Received SIGINT, shutting down gracefully');
+    // eslint-disable-next-line n/no-process-exit
     process.exit(0);
 });
 
 module.exports = app;
+
