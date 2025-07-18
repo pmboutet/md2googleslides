@@ -107,7 +107,7 @@ parser.addArgument(['-d', '--dry-run'], {
   required: false,
 });
 
-const args = parser.parseArgs();
+const args = require.main === module ? parser.parseArgs() : parser.parseArgs([]);
 
 function handleError(err) {
   console.log('Unable to generate slides:', err);
@@ -253,28 +253,32 @@ function displayResults(id) {
     opener(url);
   }
 }
-if (args.dryRun) {
-  try {
-    let source;
-    if (args.file) {
-      source = path.resolve(args.file);
-      process.chdir(path.dirname(source));
-    } else {
-      source = 0;
+if (require.main === module) {
+  if (args.dryRun) {
+    try {
+      let source;
+      if (args.file) {
+        source = path.resolve(args.file);
+        process.chdir(path.dirname(source));
+      } else {
+        source = 0;
+      }
+      const input = fs.readFileSync(source, {encoding: 'UTF-8'});
+      const css = loadCss(args.style);
+      require('../lib/parser/extract_slides').default(input, css);
+      console.log('Dry run successful - no slides created.');
+    } catch (err) {
+      handleError(err);
+      process.exitCode = 1;
     }
-    const input = fs.readFileSync(source, {encoding: 'UTF-8'});
-    const css = loadCss(args.style);
-    require('../lib/parser/extract_slides').default(input, css);
-    console.log('Dry run successful - no slides created.');
-  } catch (err) {
-    handleError(err);
-    process.exitCode = 1;
+  } else {
+    authorizeUser()
+      .then(buildSlideGenerator)
+      .then(eraseIfNeeded)
+      .then(generateSlides)
+      .then(displayResults)
+      .catch(handleError);
   }
-} else {
-  authorizeUser()
-    .then(buildSlideGenerator)
-    .then(eraseIfNeeded)
-    .then(generateSlides)
-    .then(displayResults)
-    .catch(handleError);
 }
+
+module.exports = {authorizeUser};
