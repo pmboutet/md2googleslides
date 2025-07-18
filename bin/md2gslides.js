@@ -119,6 +119,7 @@ function prompt(url) {
     console.log(url);
   } else {
     console.log('Authorize this app in your browser.');
+    console.log('\n\uD83D\uDC49 Open this URL to authorize the app:\n' + url + '\n');
     opener(url);
   }
   return new Promise((resolve, reject) => {
