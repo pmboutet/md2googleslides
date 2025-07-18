@@ -399,6 +399,24 @@ app.post('/convert', (req, res) => {
 });
 ```
 
+### Slides Service Usage
+You can run a lightweight HTTP service to convert Markdown directly to slides.
+
+Example request:
+```bash
+curl -X POST http://localhost:3000/convert-text \
+  -H "Content-Type: application/json" \
+  -d '{"markdown":"# Title","title":"Demo"}'
+```
+
+Response:
+```json
+{
+  "presentation_id": "<id>",
+  "presentation_url": "https://docs.example.com/presentation/d/<id>"
+}
+```
+
 ### Webhook GitHub
 ```bash
 # Conversion automatique lors de push

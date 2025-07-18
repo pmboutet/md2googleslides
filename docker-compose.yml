@@ -4,7 +4,7 @@ services:
   md2googleslides:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: md2slides/Dockerfile
       args:
         - BUILD_DATE=${BUILD_DATE:-}
         - VCS_REF=${VCS_REF:-}
@@ -21,7 +21,9 @@ services:
       - NODE_ENV=production
       - NODE_OPTIONS=--max-old-space-size=2048
     # Commande par défaut - peut être surchargée
-    command: ["--help"]
+    ports:
+      - "3000:3000"
+    command: ["node", "md2slides/server.js"]
     # Limites de ressources
     deploy:
       resources:
