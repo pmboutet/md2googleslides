@@ -273,7 +273,8 @@ app.get('/', (req, res) => {
 });
 
 // Error handling middleware
-app.use((err, req, res) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
+app.use((err, req, res, _next) => {
     console.error('Server error:', err);
     res.status(500).json({ error: 'Internal server error' });
 });
