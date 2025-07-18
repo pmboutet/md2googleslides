@@ -298,36 +298,38 @@ app.use((err, req, res, _next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-// Setup Google credentials if provided via environment variable
-if (process.env.GOOGLE_CREDENTIALS_JSON) {
-    try {
-        fs.writeFileSync('/tmp/google-credentials.json', process.env.GOOGLE_CREDENTIALS_JSON);
-        process.env.GOOGLE_APPLICATION_CREDENTIALS = '/tmp/google-credentials.json';
-        console.log('Google credentials configured from environment variable');
-    } catch (err) {
-        console.error('Failed to setup Google credentials:', err.message);
+if (require.main === module) {
+    // Setup Google credentials if provided via environment variable
+    if (process.env.GOOGLE_CREDENTIALS_JSON) {
+        try {
+            fs.writeFileSync('/tmp/google-credentials.json', process.env.GOOGLE_CREDENTIALS_JSON);
+            process.env.GOOGLE_APPLICATION_CREDENTIALS = '/tmp/google-credentials.json';
+            console.log('Google credentials configured from environment variable');
+        } catch (err) {
+            console.error('Failed to setup Google credentials:', err.message);
+        }
     }
+
+    // Start server
+    app.listen(port, '0.0.0.0', () => {
+        console.log(`md2slides HTTP server running on port ${port}`);
+        console.log(`Health check: http://localhost:${port}/health`);
+        console.log(`API documentation: http://localhost:${port}/`);
+    });
+
+    // Graceful shutdown
+    process.on('SIGTERM', () => {
+        console.log('Received SIGTERM, shutting down gracefully');
+        // eslint-disable-next-line n/no-process-exit
+        process.exit(0);
+    });
+
+    process.on('SIGINT', () => {
+        console.log('Received SIGINT, shutting down gracefully');
+        // eslint-disable-next-line n/no-process-exit
+        process.exit(0);
+    });
 }
 
-// Start server
-app.listen(port, '0.0.0.0', () => {
-    console.log(`md2slides HTTP server running on port ${port}`);
-    console.log(`Health check: http://localhost:${port}/health`);
-    console.log(`API documentation: http://localhost:${port}/`);
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('Received SIGTERM, shutting down gracefully');
-    // eslint-disable-next-line n/no-process-exit
-    process.exit(0);
-});
-
-process.on('SIGINT', () => {
-    console.log('Received SIGINT, shutting down gracefully');
-    // eslint-disable-next-line n/no-process-exit
-    process.exit(0);
-});
-
-module.exports = app;
+module.exports = { app, generateAuthUrl };
 
