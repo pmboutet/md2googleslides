@@ -53,8 +53,12 @@ curl -sSL https://raw.githubusercontent.com/pmboutet/md2googleslides/main/script
 
 1. Créez un projet sur [Google Cloud Console](https://console.developers.google.com)
 2. Activez l'API Google Slides
-3. Créez des credentials OAuth 2.0 pour "Application de bureau"
+3. Créez des credentials OAuth 2.0 pour "Application web"
+   - Ajoutez `http://localhost` aux **URI de redirection autorisées**
 4. Téléchargez le fichier JSON et sauvegardez-le comme `~/.md2googleslides/client_id.json`
+5. Lors de la première utilisation, ouvrez l'URL fournie et copiez le paramètre
+   `code` affiché dans la barre d'adresse puis collez‑le lorsque le programme
+   le demande
 
 ```bash
 mkdir -p ~/.md2googleslides

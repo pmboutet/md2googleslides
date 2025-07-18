@@ -55,7 +55,9 @@ interface CredentialsDb {
  *   @returns {Promise.<String>} Promise yielding the authorization code
  */
 export default class UserAuthorizer {
-  private redirectUrl = 'urn:ietf:wg:oauth:2.0:oob';
+  // Google deprecated the `oob` redirect URI. Use loopback and ask the user to
+  // copy the code from the failing browser page.
+  private redirectUrl = 'http://localhost';
   private db: LowSync<CredentialsDb>;
   private clientId: string;
   private clientSecret: string;
