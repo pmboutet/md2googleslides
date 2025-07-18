@@ -51,6 +51,14 @@ Content-Type: multipart/form-data
 - `GOOGLE_CREDENTIALS_JSON` - Google service account credentials
 - `NODE_ENV` - Environment mode (production/development)
 
+## OAuth Credentials
+
+The HTTP service expects credentials from a Google **Web application** OAuth
+client. When creating the OAuth client in the Google Cloud Console, add
+`http://localhost` to the list of authorized redirect URIs. Download the JSON
+file and place it as `client_id.json` under `~/.md2googleslides/` so the server
+can prompt for user authorization when needed.
+
 ## Docker Usage
 
 ### Build and Run
