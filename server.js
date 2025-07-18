@@ -29,12 +29,30 @@ function getStoredToken(user) {
 
 function generateAuthUrl(user) {
     try {
+        if (!fs.existsSync(CLIENT_ID_PATH)) {
+            throw new Error(`OAuth client file not found at ${CLIENT_ID_PATH}`);
+        }
+
         const data = fs.readFileSync(CLIENT_ID_PATH, 'utf8');
-        const creds = JSON.parse(data).installed;
+        let parsed;
+        try {
+            parsed = JSON.parse(data);
+        } catch (err) {
+            throw new Error(`Invalid JSON in ${CLIENT_ID_PATH}: ${err.message}`);
+        }
+
+        const creds = parsed.web || parsed.installed;
+        if (!creds) {
+            throw new Error('Credentials missing "web" or "installed" section');
+        }
+        if (!creds.client_id || !creds.client_secret) {
+            throw new Error('Credentials missing client_id or client_secret');
+        }
+
         const oAuth2Client = new OAuth2Client(
             creds.client_id,
             creds.client_secret,
-            'urn:ietf:wg:oauth:2.0:oob'
+            'http://localhost'
         );
         return oAuth2Client.generateAuthUrl({
             access_type: 'offline',
@@ -43,6 +61,7 @@ function generateAuthUrl(user) {
         });
     } catch (err) {
         console.error('Failed to generate auth URL:', err.message);
+        console.error(`Ensure a valid client_id.json exists at ${CLIENT_ID_PATH}`);
         return null;
     }
 }

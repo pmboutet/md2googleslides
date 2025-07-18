@@ -121,6 +121,8 @@ function prompt(url) {
     console.log('Authorize this app in your browser.');
     console.log('\n\uD83D\uDC49 Open this URL to authorize the app:\n' + url + '\n');
     opener(url);
+    console.log('\nIf the browser shows a connection error, copy the "code" parameter');
+    console.log('from the address bar and paste it below.');
   }
   return new Promise((resolve, reject) => {
     const rl = readline.createInterface({
@@ -140,26 +142,42 @@ function prompt(url) {
 }
 
 function authorizeUser() {
-  // Google OAuth2 clients always have a secret, even if the client is an installed
-  // application/utility such as this.  Of course, in such cases the "secret" is
-  // actually publicly known; security depends entirely on the secrecy of refresh
-  // tokens, which effectively become bearer tokens.
+  // Google OAuth2 clients always have a secret, even for tools like this one.
+  // The credentials may be of type "Web application" or "Installed" but in both
+  // cases the secret is effectively public; security relies on refresh tokens,
+  // which become bearer tokens.
 
   // Load and parse client ID and secret from client_id.json file. (Create
   // OAuth client ID from Credentials tab at console.developers.google.com
   // and download the credentials as client_id.json to ~/.md2googleslides
   let data; // needs to be scoped outside of try-catch
   try {
+    if (!fs.existsSync(STORED_CLIENT_ID_PATH)) {
+      throw new Error(`OAuth client file not found at ${STORED_CLIENT_ID_PATH}`);
+    }
     data = fs.readFileSync(STORED_CLIENT_ID_PATH);
   } catch (err) {
-    console.log('Error loading client secret file:', err);
+    console.log('Error loading client secret file:', err.message);
     throw err;
   }
   if (data === undefined) {
     console.log('Error loading client secret data');
-    throw 'No client secret found.';
+    throw new Error('No client secret found.');
   }
-  const creds = JSON.parse(data).installed;
+  let parsed;
+  try {
+    parsed = JSON.parse(data);
+  } catch (err) {
+    console.log('Invalid JSON in client secret file:', err.message);
+    throw err;
+  }
+  const creds = parsed.web || parsed.installed;
+  if (!creds) {
+    throw new Error('Credentials missing "web" or "installed" section');
+  }
+  if (!creds.client_id || !creds.client_secret) {
+    throw new Error('Credentials missing client_id or client_secret');
+  }
 
   // Authorize user and get (& store) a valid access token.
   const options = {
