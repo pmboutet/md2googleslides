@@ -121,6 +121,8 @@ function prompt(url) {
     console.log('Authorize this app in your browser.');
     console.log('\n\uD83D\uDC49 Open this URL to authorize the app:\n' + url + '\n');
     opener(url);
+    console.log('\nIf the browser shows a connection error, copy the "code" parameter');
+    console.log('from the address bar and paste it below.');
   }
   return new Promise((resolve, reject) => {
     const rl = readline.createInterface({

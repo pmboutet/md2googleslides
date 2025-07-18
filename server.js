@@ -34,7 +34,7 @@ function generateAuthUrl(user) {
         const oAuth2Client = new OAuth2Client(
             creds.client_id,
             creds.client_secret,
-            'urn:ietf:wg:oauth:2.0:oob'
+            'http://localhost'
         );
         return oAuth2Client.generateAuthUrl({
             access_type: 'offline',
