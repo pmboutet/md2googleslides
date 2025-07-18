@@ -2,8 +2,50 @@ const express = require('express');
 const { exec } = require('child_process');
 const multer = require('multer');
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { OAuth2Client } = require('google-auth-library');
 const app = express();
 const port = process.env.PORT || 3000;
+
+const SCOPES = [
+    'https://www.googleapis.com/auth/presentations',
+    'https://www.googleapis.com/auth/drive',
+];
+
+const HOME = os.homedir();
+const CREDENTIALS_PATH = path.join(HOME, '.md2googleslides', 'credentials.json');
+const CLIENT_ID_PATH = path.join(HOME, '.md2googleslides', 'client_id.json');
+
+function getStoredToken(user) {
+    try {
+        const data = fs.readFileSync(CREDENTIALS_PATH, 'utf8');
+        const tokens = JSON.parse(data);
+        return tokens[user];
+    } catch (err) {
+        return null;
+    }
+}
+
+function generateAuthUrl(user) {
+    try {
+        const data = fs.readFileSync(CLIENT_ID_PATH, 'utf8');
+        const creds = JSON.parse(data).installed;
+        const oAuth2Client = new OAuth2Client(
+            creds.client_id,
+            creds.client_secret,
+            'urn:ietf:wg:oauth:2.0:oob'
+        );
+        return oAuth2Client.generateAuthUrl({
+            access_type: 'offline',
+            scope: SCOPES,
+            login_hint: user
+        });
+    } catch (err) {
+        console.error('Failed to generate auth URL:', err.message);
+        return null;
+    }
+}
 
 // Middleware
 app.use(express.json({ limit: '50mb' }));
@@ -35,6 +77,22 @@ app.post('/convert', upload.single('markdown'), (req, res) => {
 
     const markdownPath = req.file.path;
     const { title, user, style, appendId, erase, dryRun } = req.body;
+
+    const userEmail = user || 'default';
+    if (!getStoredToken(userEmail)) {
+        const authUrl = generateAuthUrl(userEmail);
+        if (!authUrl) {
+            return res.status(500).json({
+                error: 'authorization_failed',
+                message: 'Failed to generate authorization URL'
+            });
+        }
+        return res.status(401).json({
+            error: 'authorization_required',
+            auth_url: authUrl,
+            message: 'Please authorize this app by visiting the URL provided'
+        });
+    }
 
     // Build command
     let command = `node /app/bin/md2gslides.js "${markdownPath}"`;
@@ -88,6 +146,22 @@ app.post('/convert-text', (req, res) => {
 
     if (!markdown) {
         return res.status(400).json({ error: 'No markdown content provided' });
+    }
+
+    const userEmail = user || 'default';
+    if (!getStoredToken(userEmail)) {
+        const authUrl = generateAuthUrl(userEmail);
+        if (!authUrl) {
+            return res.status(500).json({
+                error: 'authorization_failed',
+                message: 'Failed to generate authorization URL'
+            });
+        }
+        return res.status(401).json({
+            error: 'authorization_required',
+            auth_url: authUrl,
+            message: 'Please authorize this app by visiting the URL provided'
+        });
     }
 
     // Create temporary file
