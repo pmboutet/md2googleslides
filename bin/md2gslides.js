@@ -107,7 +107,7 @@ parser.addArgument(['-d', '--dry-run'], {
   required: false,
 });
 
-const args = parser.parseArgs();
+const args = require.main === module ? parser.parseArgs() : parser.parseArgs([]);
 
 function handleError(err) {
   console.log('Unable to generate slides:', err);
@@ -152,17 +152,36 @@ function authorizeUser() {
   // and download the credentials as client_id.json to ~/.md2googleslides
   let data; // needs to be scoped outside of try-catch
   try {
+    if (!fs.existsSync(STORED_CLIENT_ID_PATH)) {
+      throw new Error(`OAuth client file not found at ${STORED_CLIENT_ID_PATH}`);
+    }
     data = fs.readFileSync(STORED_CLIENT_ID_PATH);
   } catch (err) {
-    console.log('Error loading client secret file:', err);
+    console.log('Error loading client secret file:', err.message);
     throw err;
   }
   if (data === undefined) {
     console.log('Error loading client secret data');
-    throw 'No client secret found.';
+    throw new Error('No client secret found.');
   }
+  let parsed;
+  try {
+    parsed = JSON.parse(data);
+  } catch (err) {
+    console.log('Invalid JSON in client secret file:', err.message);
+    throw err;
+  }
+  const creds = parsed.web || parsed.installed;
+  if (!creds) {
+    throw new Error('Credentials missing "web" or "installed" section');
+  }
+  if (!creds.client_id || !creds.client_secret) {
+    throw new Error('Credentials missing client_id or client_secret');
+  }
+
   const parsed = JSON.parse(data);
   const creds = parsed.web || parsed.installed;
+
 
   // Authorize user and get (& store) a valid access token.
   const options = {
@@ -238,28 +257,32 @@ function displayResults(id) {
     opener(url);
   }
 }
-if (args.dryRun) {
-  try {
-    let source;
-    if (args.file) {
-      source = path.resolve(args.file);
-      process.chdir(path.dirname(source));
-    } else {
-      source = 0;
+if (require.main === module) {
+  if (args.dryRun) {
+    try {
+      let source;
+      if (args.file) {
+        source = path.resolve(args.file);
+        process.chdir(path.dirname(source));
+      } else {
+        source = 0;
+      }
+      const input = fs.readFileSync(source, {encoding: 'UTF-8'});
+      const css = loadCss(args.style);
+      require('../lib/parser/extract_slides').default(input, css);
+      console.log('Dry run successful - no slides created.');
+    } catch (err) {
+      handleError(err);
+      process.exitCode = 1;
     }
-    const input = fs.readFileSync(source, {encoding: 'UTF-8'});
-    const css = loadCss(args.style);
-    require('../lib/parser/extract_slides').default(input, css);
-    console.log('Dry run successful - no slides created.');
-  } catch (err) {
-    handleError(err);
-    process.exitCode = 1;
+  } else {
+    authorizeUser()
+      .then(buildSlideGenerator)
+      .then(eraseIfNeeded)
+      .then(generateSlides)
+      .then(displayResults)
+      .catch(handleError);
   }
-} else {
-  authorizeUser()
-    .then(buildSlideGenerator)
-    .then(eraseIfNeeded)
-    .then(generateSlides)
-    .then(displayResults)
-    .catch(handleError);
 }
+
+module.exports = {authorizeUser};

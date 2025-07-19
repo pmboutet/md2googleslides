@@ -29,9 +29,28 @@ function getStoredToken(user) {
 
 function generateAuthUrl(user) {
     try {
+        if (!fs.existsSync(CLIENT_ID_PATH)) {
+            throw new Error(`OAuth client file not found at ${CLIENT_ID_PATH}`);
+        }
+
         const data = fs.readFileSync(CLIENT_ID_PATH, 'utf8');
-        const parsed = JSON.parse(data);
+
+        let parsed;
+        try {
+            parsed = JSON.parse(data);
+        } catch (err) {
+            throw new Error(`Invalid JSON in ${CLIENT_ID_PATH}: ${err.message}`);
+        }
+
         const creds = parsed.web || parsed.installed;
+        if (!creds) {
+            throw new Error('Credentials missing "web" or "installed" section');
+        }
+        if (!creds.client_id || !creds.client_secret) {
+            throw new Error('Credentials missing client_id or client_secret');
+        }
+
+
         const oAuth2Client = new OAuth2Client(
             creds.client_id,
             creds.client_secret,
@@ -44,6 +63,7 @@ function generateAuthUrl(user) {
         });
     } catch (err) {
         console.error('Failed to generate auth URL:', err.message);
+        console.error(`Ensure a valid client_id.json exists at ${CLIENT_ID_PATH}`);
         return null;
     }
 }
@@ -280,36 +300,38 @@ app.use((err, req, res, _next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-// Setup Google credentials if provided via environment variable
-if (process.env.GOOGLE_CREDENTIALS_JSON) {
-    try {
-        fs.writeFileSync('/tmp/google-credentials.json', process.env.GOOGLE_CREDENTIALS_JSON);
-        process.env.GOOGLE_APPLICATION_CREDENTIALS = '/tmp/google-credentials.json';
-        console.log('Google credentials configured from environment variable');
-    } catch (err) {
-        console.error('Failed to setup Google credentials:', err.message);
+if (require.main === module) {
+    // Setup Google credentials if provided via environment variable
+    if (process.env.GOOGLE_CREDENTIALS_JSON) {
+        try {
+            fs.writeFileSync('/tmp/google-credentials.json', process.env.GOOGLE_CREDENTIALS_JSON);
+            process.env.GOOGLE_APPLICATION_CREDENTIALS = '/tmp/google-credentials.json';
+            console.log('Google credentials configured from environment variable');
+        } catch (err) {
+            console.error('Failed to setup Google credentials:', err.message);
+        }
     }
+
+    // Start server
+    app.listen(port, '0.0.0.0', () => {
+        console.log(`md2slides HTTP server running on port ${port}`);
+        console.log(`Health check: http://localhost:${port}/health`);
+        console.log(`API documentation: http://localhost:${port}/`);
+    });
+
+    // Graceful shutdown
+    process.on('SIGTERM', () => {
+        console.log('Received SIGTERM, shutting down gracefully');
+        // eslint-disable-next-line n/no-process-exit
+        process.exit(0);
+    });
+
+    process.on('SIGINT', () => {
+        console.log('Received SIGINT, shutting down gracefully');
+        // eslint-disable-next-line n/no-process-exit
+        process.exit(0);
+    });
 }
 
-// Start server
-app.listen(port, '0.0.0.0', () => {
-    console.log(`md2slides HTTP server running on port ${port}`);
-    console.log(`Health check: http://localhost:${port}/health`);
-    console.log(`API documentation: http://localhost:${port}/`);
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('Received SIGTERM, shutting down gracefully');
-    // eslint-disable-next-line n/no-process-exit
-    process.exit(0);
-});
-
-process.on('SIGINT', () => {
-    console.log('Received SIGINT, shutting down gracefully');
-    // eslint-disable-next-line n/no-process-exit
-    process.exit(0);
-});
-
-module.exports = app;
+module.exports = { app, generateAuthUrl };
 
