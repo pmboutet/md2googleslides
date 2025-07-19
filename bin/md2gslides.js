@@ -179,6 +179,10 @@ function authorizeUser() {
     throw new Error('Credentials missing client_id or client_secret');
   }
 
+  const parsed = JSON.parse(data);
+  const creds = parsed.web || parsed.installed;
+
+
   // Authorize user and get (& store) a valid access token.
   const options = {
     clientId: creds.client_id,

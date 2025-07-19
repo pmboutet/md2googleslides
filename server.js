@@ -34,6 +34,7 @@ function generateAuthUrl(user) {
         }
 
         const data = fs.readFileSync(CLIENT_ID_PATH, 'utf8');
+
         let parsed;
         try {
             parsed = JSON.parse(data);
@@ -48,6 +49,7 @@ function generateAuthUrl(user) {
         if (!creds.client_id || !creds.client_secret) {
             throw new Error('Credentials missing client_id or client_secret');
         }
+
 
         const oAuth2Client = new OAuth2Client(
             creds.client_id,
