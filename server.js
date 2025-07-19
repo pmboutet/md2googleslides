@@ -17,6 +17,9 @@ const HOME = os.homedir();
 const CREDENTIALS_PATH = path.join(HOME, '.md2googleslides', 'credentials.json');
 const CLIENT_ID_PATH = path.join(HOME, '.md2googleslides', 'client_id.json');
 
+// OAuth 2.0 redirect URI for web application
+const REDIRECT_URI = `http://localhost:${port}/oauth/callback`;
+
 function getStoredToken(user) {
     try {
         const data = fs.readFileSync(CREDENTIALS_PATH, 'utf8');
@@ -24,6 +27,29 @@ function getStoredToken(user) {
         return tokens[user];
     } catch (err) {
         return null;
+    }
+}
+
+function storeToken(user, tokens) {
+    try {
+        let data = {};
+        if (fs.existsSync(CREDENTIALS_PATH)) {
+            const existingData = fs.readFileSync(CREDENTIALS_PATH, 'utf8');
+            data = JSON.parse(existingData);
+        }
+        data[user] = tokens;
+        
+        // Ensure directory exists
+        const dir = path.dirname(CREDENTIALS_PATH);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        
+        fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify(data, null, 2));
+        return true;
+    } catch (err) {
+        console.error('Failed to store token:', err.message);
+        return false;
     }
 }
 
@@ -52,16 +78,44 @@ function generateAuthUrl(user) {
         const oAuth2Client = new OAuth2Client(
             creds.client_id,
             creds.client_secret,
-            'http://localhost'
+            REDIRECT_URI
         );
+        
         return oAuth2Client.generateAuthUrl({
             access_type: 'offline',
             scope: SCOPES,
-            login_hint: user
+            login_hint: user,
+            state: user // Pass user in state parameter for later retrieval
         });
     } catch (err) {
         console.error('Failed to generate auth URL:', err.message);
         console.error(`Ensure a valid client_id.json exists at ${CLIENT_ID_PATH}`);
+        return null;
+    }
+}
+
+async function exchangeCodeForTokens(code, user) {
+    try {
+        const data = fs.readFileSync(CLIENT_ID_PATH, 'utf8');
+        const parsed = JSON.parse(data);
+        const creds = parsed.web || parsed.installed;
+        
+        const oAuth2Client = new OAuth2Client(
+            creds.client_id,
+            creds.client_secret,
+            REDIRECT_URI
+        );
+        
+        const { tokens } = await oAuth2Client.getToken(code);
+        
+        // Store tokens
+        if (storeToken(user, tokens)) {
+            return tokens;
+        } else {
+            throw new Error('Failed to store tokens');
+        }
+    } catch (err) {
+        console.error('Failed to exchange code for tokens:', err.message);
         return null;
     }
 }
@@ -78,13 +132,49 @@ const upload = multer({
     }
 });
 
+// OAuth callback endpoint
+app.get('/oauth/callback', async (req, res) => {
+    const { code, state, error } = req.query;
+    
+    if (error) {
+        return res.status(400).json({
+            error: 'authorization_denied',
+            message: `OAuth authorization failed: ${error}`
+        });
+    }
+    
+    if (!code) {
+        return res.status(400).json({
+            error: 'missing_code',
+            message: 'Authorization code not received'
+        });
+    }
+    
+    const user = state || 'default';
+    const tokens = await exchangeCodeForTokens(code, user);
+    
+    if (tokens) {
+        res.json({
+            success: true,
+            message: 'Authorization successful. You can now use the API.',
+            user: user
+        });
+    } else {
+        res.status(500).json({
+            error: 'token_exchange_failed',
+            message: 'Failed to exchange authorization code for tokens'
+        });
+    }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.json({
         status: 'healthy',
         service: 'md2slides-server',
         timestamp: new Date().toISOString(),
-        version: require('./package.json').version
+        version: require('./package.json').version,
+        oauth_redirect_uri: REDIRECT_URI
     });
 });
 
@@ -263,11 +353,13 @@ app.get('/', (req, res) => {
         service: 'md2slides HTTP API',
         version: require('./package.json').version,
         description: 'HTTP API wrapper for md2googleslides CLI tool',
+        oauth_redirect_uri: REDIRECT_URI,
         endpoints: {
             'GET /': 'This help page',
             'GET /health': 'Health check',
             'GET /version': 'Get md2gslides version',
             'GET /help': 'Get md2gslides CLI help',
+            'GET /oauth/callback': 'OAuth 2.0 callback endpoint',
             'POST /convert': 'Convert markdown file to Google Slides (multipart/form-data)',
             'POST /convert-text': 'Convert markdown text to Google Slides (JSON)'
         },
@@ -315,6 +407,7 @@ if (require.main === module) {
         console.log(`md2slides HTTP server running on port ${port}`);
         console.log(`Health check: http://localhost:${port}/health`);
         console.log(`API documentation: http://localhost:${port}/`);
+        console.log(`OAuth callback URI: ${REDIRECT_URI}`);
     });
 
     // Graceful shutdown
@@ -332,4 +425,3 @@ if (require.main === module) {
 }
 
 module.exports = { app, generateAuthUrl };
-
