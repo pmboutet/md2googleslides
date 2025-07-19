@@ -14,8 +14,8 @@ services:
     volumes:
       # Monter le répertoire de travail pour les fichiers d'entrée/sortie
       - ./workspace:/workspace
-      # Monter le répertoire de credentials Google (optionnel)
-      - ./credentials:/home/md2gslides/.md2googleslides:ro
+      # Monter le répertoire de credentials Google avec droits d'écriture
+      - ./credentials:/home/md2gslides/.md2googleslides
     working_dir: /app
     environment:
       - NODE_ENV=production
