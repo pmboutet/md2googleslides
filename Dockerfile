@@ -68,8 +68,10 @@ COPY scripts/ ./scripts/
 # Make scripts executable
 RUN chmod +x scripts/*.sh
 
-# Create directory for Google credentials and temp files
-RUN mkdir -p /home/md2gslides/.md2googleslides /tmp/uploads
+# Create directory for Google credentials and temp files with proper permissions
+RUN mkdir -p /home/md2gslides/.md2googleslides /tmp/uploads && \
+    chown -R md2gslides:nodejs /home/md2gslides/.md2googleslides && \
+    chmod -R 755 /home/md2gslides/.md2googleslides
 
 # Change ownership to non-root user
 RUN chown -R md2gslides:nodejs /app && \
