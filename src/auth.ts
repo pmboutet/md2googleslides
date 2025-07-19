@@ -28,6 +28,7 @@ export interface AuthOptions {
   clientSecret: string;
   prompt: UserPrompt;
   filePath?: string;
+  redirectUri?: string;
 }
 
 interface CredentialsDb {
@@ -55,9 +56,10 @@ interface CredentialsDb {
  *   @returns {Promise.<String>} Promise yielding the authorization code
  */
 export default class UserAuthorizer {
-  // Google deprecated the `oob` redirect URI. Use loopback and ask the user to
+  // For web applications, use a proper callback URL
+  // For installed/desktop apps, Google deprecated the 'oob' redirect URI. Use loopback and ask the user to
   // copy the code from the failing browser page.
-  private redirectUrl = 'http://localhost';
+  private redirectUrl: string;
   private db: LowSync<CredentialsDb>;
   private clientId: string;
   private clientSecret: string;
@@ -75,6 +77,8 @@ export default class UserAuthorizer {
     this.clientId = options.clientId;
     this.clientSecret = options.clientSecret;
     this.prompt = options.prompt;
+    // Use provided redirect URI or default for installed apps
+    this.redirectUrl = options.redirectUri || 'http://localhost:8080';
   }
 
   /**
