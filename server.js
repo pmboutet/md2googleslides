@@ -327,6 +327,145 @@ app.post('/convert-text', (req, res) => {
     });
 });
 
+// 🆕 NEW: Advanced conversion endpoint for md2slides_converter service
+app.post('/convert-advanced', (req, res) => {
+    const { 
+        markdown, 
+        title, 
+        user, 
+        template_id, 
+        append_to_id, 
+        auto_share, 
+        share_emails, 
+        use_fileio, 
+        dry_run,
+        style // Legacy support
+    } = req.body;
+
+    if (!markdown) {
+        return res.status(400).json({ 
+            error: 'No markdown content provided',
+            service: 'md2googleslides-advanced'
+        });
+    }
+
+    const userEmail = user || 'default';
+    if (!getStoredToken(userEmail)) {
+        const authUrl = generateAuthUrl(userEmail);
+        if (!authUrl) {
+            return res.status(500).json({
+                error: 'authorization_failed',
+                message: 'Failed to generate authorization URL',
+                service: 'md2googleslides-advanced'
+            });
+        }
+        return res.status(401).json({
+            error: 'authorization_required',
+            auth_url: authUrl,
+            message: 'Please authorize this app by visiting the URL provided',
+            service: 'md2googleslides-advanced'
+        });
+    }
+
+    // Create temporary file
+    const tempFile = `/tmp/markdown-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.md`;
+
+    try {
+        fs.writeFileSync(tempFile, markdown);
+    } catch (err) {
+        return res.status(500).json({ 
+            error: 'Failed to create temporary file',
+            service: 'md2googleslides-advanced'
+        });
+    }
+
+    // Build command with new parameters
+    let command = `node /app/bin/md2gslides.js "${tempFile}"`;
+
+    if (title) command += ` --title "${title}"`;
+    if (user) command += ` --user "${user}"`;
+    
+    // New: Template support
+    if (template_id) command += ` --template-id "${template_id}"`;
+    
+    // New: Append support (prioritize over template)
+    if (append_to_id) {
+        command += ` --append "${append_to_id}"`;
+    }
+    
+    // Legacy style support
+    if (style) command += ` --style "${style}"`;
+    
+    // New: File upload support
+    if (use_fileio === true || use_fileio === 'true') {
+        command += ' --use-fileio';
+    }
+    
+    // Dry run support
+    if (dry_run === true || dry_run === 'true') {
+        command += ' --dry-run';
+    }
+
+    command += ' --no-browser';
+
+    console.log('Executing advanced command:', command);
+
+    // Execute md2gslides
+    exec(command, {
+        cwd: '/app',
+        timeout: 300000, // 5 minutes timeout
+        env: { ...process.env, GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_CREDENTIALS_JSON ? '/tmp/google-credentials.json' : undefined }
+    }, (error, stdout, stderr) => {
+        // Clean up temp file
+        fs.unlink(tempFile, () => {});
+
+        if (error) {
+            console.error('Advanced conversion error:', error);
+            return res.status(500).json({
+                error: 'Conversion failed',
+                details: stderr || error.message,
+                command: command.replace(/--user "[^"]*"/, '--user "[REDACTED]"'),
+                service: 'md2googleslides-advanced',
+                method: 'http_api'
+            });
+        }
+
+        // Extract presentation ID and URL from stdout
+        const urlMatch = stdout.match(/https:\/\/docs\.google\.com\/presentation\/d\/([a-zA-Z0-9-_]+)/);
+        const presentationUrl = urlMatch ? urlMatch[0] : null;
+        const presentationId = urlMatch ? urlMatch[1] : null;
+
+        // Enhanced response for md2slides_converter compatibility
+        const response = {
+            status: 'success',
+            presentation_id: presentationId,
+            presentation_url: presentationUrl,
+            service: 'md2googleslides-advanced',
+            method: 'http_api',
+            timestamp: new Date().toISOString(),
+            raw_output: stdout
+        };
+
+        // Add enhanced URLs if we have an ID
+        if (presentationId) {
+            response.edit_url = `https://docs.google.com/presentation/d/${presentationId}/edit`;
+            response.preview_url = `https://docs.google.com/presentation/d/${presentationId}/preview`;
+            response.export_pdf_url = `https://docs.google.com/presentation/d/${presentationId}/export/pdf`;
+        }
+
+        // Note about sharing (actual sharing would need to be implemented in the CLI tool)
+        if (auto_share && share_emails && share_emails.length > 0) {
+            response.sharing_note = 'Sharing parameters received but not yet implemented in md2googleslides CLI. Use md2slides_converter service for full sharing support.';
+            response.requested_sharing = {
+                auto_share,
+                share_emails
+            };
+        }
+
+        res.json(response);
+    });
+});
+
 // Version endpoint
 app.get('/version', (req, res) => {
     exec('node /app/bin/md2gslides.js --version', { cwd: '/app' }, (error, stdout) => {
@@ -361,7 +500,8 @@ app.get('/', (req, res) => {
             'GET /help': 'Get md2gslides CLI help',
             'GET /oauth/callback': 'OAuth 2.0 callback endpoint',
             'POST /convert': 'Convert markdown file to Google Slides (multipart/form-data)',
-            'POST /convert-text': 'Convert markdown text to Google Slides (JSON)'
+            'POST /convert-text': 'Convert markdown text to Google Slides (JSON)',
+            'POST /convert-advanced': '🆕 Advanced conversion with template_id, append_to_id, and sharing support (JSON)'
         },
         examples: {
             convertText: {
@@ -372,6 +512,22 @@ app.get('/', (req, res) => {
                     title: 'My Presentation',
                     user: 'user@example.com',
                     style: 'github'
+                }
+            },
+            convertAdvanced: {
+                url: 'POST /convert-advanced',
+                headers: { 'Content-Type': 'application/json' },
+                body: {
+                    markdown: '# Advanced Presentation\n\n## New Section\nAdvanced content',
+                    title: 'Advanced Presentation',
+                    user: 'user@example.com',
+                    template_id: '1ABC123_TEMPLATE_ID',
+                    append_to_id: '1XYZ789_EXISTING_PRESENTATION',
+                    auto_share: true,
+                    share_emails: [
+                        { email: 'colleague@example.com', role: 'writer' }
+                    ],
+                    dry_run: false
                 }
             },
             convertFile: {
