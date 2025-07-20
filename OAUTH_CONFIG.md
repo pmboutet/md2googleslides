@@ -10,7 +10,7 @@ Ce document explique comment configurer correctement OAuth 2.0 pour md2googlesli
 - **Type de client ambigu** : Configuration entre app installée et web app
 
 ### Après (Configuration correcte)
-- **Redirect URI complète** : `http://localhost:3000/oauth/callback`
+- **Redirect URI complète** : `https://n8n-ivayh-u36210.vm.elestio.app/oauth/callback`
 - **Endpoint callback fonctionnel** : `GET /oauth/callback`
 - **Configuration web app** : Adaptée aux applications web
 
@@ -24,7 +24,7 @@ Ce document explique comment configurer correctement OAuth 2.0 pour md2googlesli
 Ajoutez dans Google Cloud Console → APIs & Services → Credentials → Votre Client OAuth 2.0 :
 
 ```
-http://localhost:3000/oauth/callback
+https://n8n-ivayh-u36210.vm.elestio.app/oauth/callback
 ```
 
 ### 3. Origines JavaScript autorisées (optionnel)
@@ -54,7 +54,7 @@ Maintenant inclut l'URI de redirection OAuth pour vérification :
 ```json
 {
   "status": "healthy",
-  "oauth_redirect_uri": "http://localhost:3000/oauth/callback"
+  "oauth_redirect_uri": "https://n8n-ivayh-u36210.vm.elestio.app/oauth/callback"
 }
 ```
 
@@ -80,7 +80,7 @@ Si l'utilisateur n'est pas autorisé, réponse :
 L'utilisateur visite `auth_url` et autorise l'application.
 
 ### 3. Callback automatique
-Google redirige vers `http://localhost:3000/oauth/callback` avec le code d'autorisation.
+Google redirige vers `https://n8n-ivayh-u36210.vm.elestio.app/oauth/callback` avec le code d'autorisation.
 
 ### 4. Stockage des tokens
 L'application échange le code contre des tokens et les stocke pour utilisation future.
@@ -92,7 +92,7 @@ Les appels suivants utilisent les tokens stockés automatiquement.
 
 ### ✅ Redirect URI complète avec port
 ```javascript
-const REDIRECT_URI = `http://localhost:${port}/oauth/callback`;
+const REDIRECT_URI = `https://n8n-ivayh-u36210.vm.elestio.app/oauth/callback`;
 ```
 
 ### ✅ Gestion d'état (state parameter)
