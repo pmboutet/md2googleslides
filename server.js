@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { OAuth2Client } = require('google-auth-library');
+const { ensureMarkers } = require('./lib/src/deck_import');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -116,6 +117,28 @@ async function exchangeCodeForTokens(code, user) {
         }
     } catch (err) {
         console.error('Failed to exchange code for tokens:', err.message);
+        return null;
+    }
+}
+
+function getAuthorizedClient(user) {
+    try {
+        const data = fs.readFileSync(CLIENT_ID_PATH, 'utf8');
+        const parsed = JSON.parse(data);
+        const creds = parsed.web || parsed.installed;
+        const tokens = getStoredToken(user);
+        if (!tokens) {
+            return null;
+        }
+        const oAuth2Client = new OAuth2Client(
+            creds.client_id,
+            creds.client_secret,
+            REDIRECT_URI
+        );
+        oAuth2Client.setCredentials(tokens);
+        return oAuth2Client;
+    } catch (err) {
+        console.error('Failed to create OAuth client:', err.message);
         return null;
     }
 }
@@ -327,6 +350,44 @@ app.post('/convert-text', (req, res) => {
     });
 });
 
+// Presentation discovery endpoint
+app.get('/discover', async (req, res) => {
+    const presentationId = req.query.id || req.query.presentationId;
+    const user = req.query.user || 'default';
+
+    if (!presentationId) {
+        return res.status(400).json({ error: 'Missing presentation ID' });
+    }
+
+    if (!getStoredToken(user)) {
+        const authUrl = generateAuthUrl(user);
+        if (!authUrl) {
+            return res.status(500).json({
+                error: 'authorization_failed',
+                message: 'Failed to generate authorization URL'
+            });
+        }
+        return res.status(401).json({
+            error: 'authorization_required',
+            auth_url: authUrl,
+            message: 'Please authorize this app by visiting the URL provided'
+        });
+    }
+
+    const client = getAuthorizedClient(user);
+    if (!client) {
+        return res.status(500).json({ error: 'Failed to create OAuth client' });
+    }
+
+    try {
+        const info = await ensureMarkers(client, presentationId);
+        res.json({ success: true, presentation: info });
+    } catch (err) {
+        console.error('Discovery error:', err);
+        res.status(500).json({ error: 'Failed to discover presentation' });
+    }
+});
+
 // 🆕 NEW: Advanced conversion endpoint for md2slides_converter service
 app.post('/convert-advanced', (req, res) => {
     const { 
@@ -499,6 +560,7 @@ app.get('/', (req, res) => {
             'GET /version': 'Get md2gslides version',
             'GET /help': 'Get md2gslides CLI help',
             'GET /oauth/callback': 'OAuth 2.0 callback endpoint',
+            'GET /discover': 'Get presentation layouts and slides',
             'POST /convert': 'Convert markdown file to Google Slides (multipart/form-data)',
             'POST /convert-text': 'Convert markdown text to Google Slides (JSON)',
             'POST /convert-advanced': '🆕 Advanced conversion with template_id, append_to_id, and sharing support (JSON)'
@@ -534,6 +596,10 @@ app.get('/', (req, res) => {
                 url: 'POST /convert',
                 headers: { 'Content-Type': 'multipart/form-data' },
                 body: 'Form data with "markdown" file field'
+            },
+            discover: {
+                url: 'GET /discover?id=YOUR_PRESENTATION_ID&user=user@example.com',
+                headers: { 'Content-Type': 'application/json' }
             }
         }
     });

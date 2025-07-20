@@ -40,10 +40,17 @@ Content-Type: multipart/form-data
 # Form data with 'markdown' file field
 ```
 
+### Discover Presentation
+```bash
+GET /discover?id=<presentationId>&user=<email>
+```
+Returns metadata about the presentation and inserts md2slides markers if missing.
+
 ### Other Endpoints
 - `GET /` - API documentation
 - `GET /version` - Get md2gslides version
 - `GET /help` - Get CLI help
+- `GET /discover?id=<ID>&user=<email>` - Discover slides and layouts
 
 ## Environment Variables
 
