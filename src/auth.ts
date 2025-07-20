@@ -124,6 +124,9 @@ export default class UserAuthorizer {
     const code = await this.prompt(authUrl);
     const tokenResponse = await oauth2Client.getToken(code);
     oauth2Client.setCredentials(tokenResponse.tokens);
+    // Persist credentials including refresh token for future runs
+    this.db.data[user] = tokenResponse.tokens;
+    this.db.write();
     return oauth2Client;
   }
 
