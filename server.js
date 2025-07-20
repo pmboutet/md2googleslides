@@ -19,7 +19,8 @@ const CREDENTIALS_PATH = path.join(HOME, '.md2googleslides', 'credentials.json')
 const CLIENT_ID_PATH = path.join(HOME, '.md2googleslides', 'client_id.json');
 
 // OAuth 2.0 redirect URI for web application
-const REDIRECT_URI = `http://localhost:${port}/oauth/callback`;
+// Updated to use the public domain instead of localhost
+const REDIRECT_URI = 'https://n8n-ivayh-u36210.vm.elestio.app/oauth/callback';
 
 function getStoredToken(user) {
     try {

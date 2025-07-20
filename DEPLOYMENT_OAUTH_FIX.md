@@ -64,7 +64,7 @@ curl -X POST http://localhost:3000/convert-text \
 ### 3. Tester le callback OAuth
 ```bash
 # Utiliser le nouveau code d'autorisation
-curl "http://localhost:3000/oauth/callback?state=contact@groupe-pmvb.com&code=NOUVEAU_CODE&scope=..."
+curl "https://n8n-ivayh-u36210.vm.elestio.app/oauth/callback?state=contact@groupe-pmvb.com&code=NOUVEAU_CODE&scope=..."
 ```
 
 ### 4. Vérifier le stockage des tokens
@@ -101,7 +101,7 @@ docker exec md2slides ls -la /home/md2gslides/
 
 Assurez-vous que dans Google Cloud Console :
 - **Type de client** : Application Web
-- **URI de redirection autorisée** : `http://localhost:3000/oauth/callback`
+- **URI de redirection autorisée** : `https://n8n-ivayh-u36210.vm.elestio.app/oauth/callback`
 - **Origines JavaScript autorisées** (optionnel) : `http://localhost:3000`
 
 Le problème "read-only file system" est maintenant résolu ! 🎯
