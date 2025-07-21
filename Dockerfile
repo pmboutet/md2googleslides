@@ -1,4 +1,4 @@
-# Use official Node.js LTS image
+# Build stage
 FROM node:20-alpine AS builder
 
 # Install system dependencies required for Sharp and other native tools
@@ -41,7 +41,7 @@ RUN apk add --no-cache \
     libc6-compat \
     curl
 
-# Create non-root user for security
+# Create non-root user for security - IDs alignés avec docker-compose
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S md2gslides -u 1001 -G nodejs
 
@@ -68,15 +68,16 @@ COPY scripts/ ./scripts/
 # Make scripts executable
 RUN chmod +x scripts/*.sh
 
-# Create directory for Google credentials and temp files with proper permissions
+# 🔧 CRITIQUE: Créer les répertoires avec permissions correctes pour OAuth
 RUN mkdir -p /home/md2gslides/.md2googleslides /tmp/uploads && \
     chown -R md2gslides:nodejs /home/md2gslides/.md2googleslides && \
-    chmod -R 755 /home/md2gslides/.md2googleslides
+    chmod -R 755 /home/md2gslides/.md2googleslides && \
+    chown -R md2gslides:nodejs /tmp/uploads && \
+    chmod -R 755 /tmp/uploads
 
 # Change ownership to non-root user
 RUN chown -R md2gslides:nodejs /app && \
-    chown -R md2gslides:nodejs /home/md2gslides && \
-    chown -R md2gslides:nodejs /tmp/uploads
+    chown -R md2gslides:nodejs /home/md2gslides
 
 # Switch to non-root user
 USER md2gslides
@@ -85,6 +86,7 @@ USER md2gslides
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max-old-space-size=2048"
 ENV PORT=3000
+ENV HOME=/home/md2gslides
 
 # Healthcheck for HTTP server mode
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
@@ -94,7 +96,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 EXPOSE 3000
 
 # Default to HTTP server mode
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
 
 # Documentation labels
 LABEL maintainer="Pierre-Marie Boutet <pmboutet@example.com>"
