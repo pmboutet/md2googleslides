@@ -4,36 +4,26 @@ services:
   md2googleslides:
     build:
       context: .
-      dockerfile: md2slides/Dockerfile
-      args:
-        - BUILD_DATE=${BUILD_DATE:-}
-        - VCS_REF=${VCS_REF:-}
-        - VERSION=${VERSION:-0.5.3}
+      dockerfile: Dockerfile
     image: md2googleslides:latest
-    container_name: md2googleslides
+    container_name: md2slides
+    ports:
+      - "3000:3000"
     volumes:
       # Monter le répertoire de travail pour les fichiers d'entrée/sortie
       - ./workspace:/workspace
-      # Monter le répertoire de credentials Google avec droits d'écriture
+      # 🔧 CRITIQUE: Supprimer :ro pour permettre l'écriture des tokens OAuth
       - ./credentials:/home/md2gslides/.md2googleslides
-    working_dir: /app
+      - /tmp:/tmp
     environment:
       - NODE_ENV=production
-      - NODE_OPTIONS=--max-old-space-size=2048
-    # Commande par défaut - peut être surchargée
-    ports:
-      - "3000:3000"
-    command: ["node", "md2slides/server.js"]
-    # Limites de ressources
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '1.0'
-        reservations:
-          memory: 512M
-          cpus: '0.5'
-    
+      - PORT=3000
+      - REDIRECT_URI=https://n8n-ivayh-u36210.vm.elestio.app/oauth/callback
+    restart: unless-stopped
+    user: "1001:1001"
+    networks:
+      - md2slides_network
+
   # Service pour le développement et les tests
   md2googleslides-dev:
     build:
@@ -70,8 +60,8 @@ services:
 
 # Réseau par défaut
 networks:
-  default:
-    name: md2googleslides-network
+  md2slides_network:
+    driver: bridge
 
 # Volumes pour la persistance des données
 volumes:
