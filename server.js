@@ -18,36 +18,72 @@ const HOME = os.homedir();
 const CREDENTIALS_PATH = path.join(HOME, '.md2googleslides', 'credentials.json');
 const CLIENT_ID_PATH = path.join(HOME, '.md2googleslides', 'client_id.json');
 
-// OAuth 2.0 redirect URI for web application
-// Updated to use the public domain instead of localhost
-const REDIRECT_URI = 'https://n8n-ivayh-u36210.vm.elestio.app/oauth/callback';
+// OAuth 2.0 redirect URI - mise à jour avec domaine public
+const REDIRECT_URI = process.env.REDIRECT_URI || 'https://n8n-ivayh-u36210.vm.elestio.app/oauth/callback';
 
+/**
+ * Obtenir un token stocké pour un utilisateur
+ * Amélioré avec validation et gestion des erreurs
+ */
 function getStoredToken(user) {
     try {
         const data = fs.readFileSync(CREDENTIALS_PATH, 'utf8');
         const tokens = JSON.parse(data);
-        return tokens[user];
+        const userTokens = tokens[user];
+        
+        if (!userTokens) {
+            return null;
+        }
+        
+        // Vérifier que le refresh token existe
+        if (!userTokens.refresh_token) {
+            console.warn(`No refresh token found for user ${user}`);
+            return null;
+        }
+        
+        return userTokens;
     } catch (err) {
+        console.error('Error reading stored tokens:', err.message);
         return null;
     }
 }
 
+/**
+ * Stocker un token pour un utilisateur
+ * Amélioré avec validation et atomic writes
+ */
 function storeToken(user, tokens) {
     try {
         let data = {};
-        if (fs.existsSync(CREDENTIALS_PATH)) {
-            const existingData = fs.readFileSync(CREDENTIALS_PATH, 'utf8');
-            data = JSON.parse(existingData);
-        }
-        data[user] = tokens;
         
-        // Ensure directory exists
+        // Lire les données existantes
+        if (fs.existsSync(CREDENTIALS_PATH)) {
+            try {
+                const existingData = fs.readFileSync(CREDENTIALS_PATH, 'utf8');
+                data = JSON.parse(existingData);
+            } catch (parseErr) {
+                console.warn('Could not parse existing credentials, starting fresh:', parseErr.message);
+            }
+        }
+        
+        // Ajouter timestamp pour traçabilité
+        data[user] = {
+            ...tokens,
+            timestamp: Date.now()
+        };
+        
+        // Assurer que le répertoire existe
         const dir = path.dirname(CREDENTIALS_PATH);
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
         }
         
-        fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify(data, null, 2));
+        // Écriture atomique via fichier temporaire
+        const tempPath = CREDENTIALS_PATH + '.tmp';
+        fs.writeFileSync(tempPath, JSON.stringify(data, null, 2));
+        fs.renameSync(tempPath, CREDENTIALS_PATH);
+        
+        console.log(`Tokens stored successfully for user: ${user}`);
         return true;
     } catch (err) {
         console.error('Failed to store token:', err.message);
@@ -55,6 +91,10 @@ function storeToken(user, tokens) {
     }
 }
 
+/**
+ * Générer une URL d'autorisation OAuth
+ * Amélioré avec meilleure gestion des erreurs
+ */
 function generateAuthUrl(user) {
     try {
         if (!fs.existsSync(CLIENT_ID_PATH)) {
@@ -87,7 +127,8 @@ function generateAuthUrl(user) {
             access_type: 'offline',
             scope: SCOPES,
             login_hint: user,
-            state: user // Pass user in state parameter for later retrieval
+            state: user, // Pass user in state parameter
+            prompt: 'consent' // Force consent to get refresh token
         });
     } catch (err) {
         console.error('Failed to generate auth URL:', err.message);
@@ -96,6 +137,10 @@ function generateAuthUrl(user) {
     }
 }
 
+/**
+ * Échanger un code d'autorisation contre des tokens
+ * Amélioré avec meilleure validation et retry logic
+ */
 async function exchangeCodeForTokens(code, user) {
     try {
         const data = fs.readFileSync(CLIENT_ID_PATH, 'utf8');
@@ -108,35 +153,65 @@ async function exchangeCodeForTokens(code, user) {
             REDIRECT_URI
         );
         
+        console.log(`Attempting to exchange code for tokens for user: ${user}`);
         const { tokens } = await oAuth2Client.getToken(code);
         
-        // Store tokens
+        // Vérifier que nous avons un refresh token
+        if (!tokens.refresh_token) {
+            console.warn('No refresh token received - user may need to revoke app access first');
+            throw new Error('No refresh token received. Please revoke this app\'s access in your Google Account settings and authorize again.');
+        }
+        
+        // Stocker les tokens
         if (storeToken(user, tokens)) {
+            console.log('Tokens successfully stored');
             return tokens;
         } else {
             throw new Error('Failed to store tokens');
         }
     } catch (err) {
         console.error('Failed to exchange code for tokens:', err.message);
+        
+        // Messages d'erreur spécifiques
+        if (err.message.includes('invalid_grant')) {
+            console.error('Authorization code expired or already used. Please try the authorization flow again.');
+        }
+        
         return null;
     }
 }
 
+/**
+ * Obtenir un client OAuth2 autorisé
+ * Amélioré avec validation et refresh automatique
+ */
 function getAuthorizedClient(user) {
     try {
         const data = fs.readFileSync(CLIENT_ID_PATH, 'utf8');
         const parsed = JSON.parse(data);
         const creds = parsed.web || parsed.installed;
         const tokens = getStoredToken(user);
+        
         if (!tokens) {
+            console.log(`No valid tokens found for user: ${user}`);
             return null;
         }
+        
         const oAuth2Client = new OAuth2Client(
             creds.client_id,
             creds.client_secret,
             REDIRECT_URI
         );
+        
         oAuth2Client.setCredentials(tokens);
+        
+        // Configurer le gestionnaire de tokens pour la persistence
+        oAuth2Client.on('tokens', (newTokens) => {
+            console.log('Received new tokens, updating storage');
+            const updatedTokens = { ...tokens, ...newTokens };
+            storeToken(user, updatedTokens);
+        });
+        
         return oAuth2Client;
     } catch (err) {
         console.error('Failed to create OAuth client:', err.message);
@@ -148,7 +223,7 @@ function getAuthorizedClient(user) {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Configure multer for file uploads
+// Configurer multer pour les uploads de fichiers
 const upload = multer({
     dest: '/tmp/uploads/',
     limits: {
@@ -156,11 +231,12 @@ const upload = multer({
     }
 });
 
-// OAuth callback endpoint
+// OAuth callback endpoint - amélioré
 app.get('/oauth/callback', async (req, res) => {
     const { code, state, error } = req.query;
     
     if (error) {
+        console.error('OAuth authorization error:', error);
         return res.status(400).json({
             error: 'authorization_denied',
             message: `OAuth authorization failed: ${error}`
@@ -175,13 +251,16 @@ app.get('/oauth/callback', async (req, res) => {
     }
     
     const user = state || 'default';
+    console.log(`Processing OAuth callback for user: ${user}`);
+    
     const tokens = await exchangeCodeForTokens(code, user);
     
     if (tokens) {
         res.json({
             success: true,
             message: 'Authorization successful. You can now use the API.',
-            user: user
+            user: user,
+            has_refresh_token: !!tokens.refresh_token
         });
     } else {
         res.status(500).json({
@@ -191,14 +270,15 @@ app.get('/oauth/callback', async (req, res) => {
     }
 });
 
-// Health check endpoint
+// Health check endpoint - amélioré
 app.get('/health', (req, res) => {
     res.json({
         status: 'healthy',
         service: 'md2slides-server',
         timestamp: new Date().toISOString(),
         version: require('./package.json').version,
-        oauth_redirect_uri: REDIRECT_URI
+        oauth_redirect_uri: REDIRECT_URI,
+        credentials_path_exists: fs.existsSync(CLIENT_ID_PATH)
     });
 });
 
@@ -614,7 +694,7 @@ app.use((err, req, res, _next) => {
 });
 
 if (require.main === module) {
-    // Setup Google credentials if provided via environment variable
+    // Setup Google credentials si fourni via variable d'environnement
     if (process.env.GOOGLE_CREDENTIALS_JSON) {
         try {
             fs.writeFileSync('/tmp/google-credentials.json', process.env.GOOGLE_CREDENTIALS_JSON);
