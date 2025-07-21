@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//    http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,28 +32,18 @@ export interface AuthOptions {
 }
 
 interface CredentialsDb {
-  [key: string]: Credentials;
+  [key: string]: Credentials & { timestamp?: number };
 }
 
 /**
  * Handles the authorization flow, intended for command line usage.
- *
- * @example
- *   var auth = new UserAuthorizer({
- *     clientId: 'my-client-id',
- *     clientSecret: 'my-client-secret',
- *     filePath: '/path/to/persistent/token/storage'
- *     prompt: function(url) { ... }
- *   });
- *
- *   var credentials = auth.getUserCredentials('user@example.com', 'https://www.googleapis.com/auth/slides');
- *   credentials.then(function(oauth2Client) {
- *     // Valid oauth2Client for use with google APIs.
- *   });
- *
- *   @callback UserAuthorizer-promptCallback
- *   @param {String} url Authorization URL to display to user or open in browser
- *   @returns {Promise.<String>} Promise yielding the authorization code
+ * 
+ * Améliorations OAuth v2.0:
+ * - Meilleure gestion des refresh tokens
+ * - Retry automatique en cas d'échec
+ * - Validation des tokens avant utilisation
+ * - Force le consentement pour obtenir refresh token
+ * - Gestion des erreurs améliorée
  */
 export default class UserAuthorizer {
   // For web applications, use a proper callback URL
@@ -85,6 +75,12 @@ export default class UserAuthorizer {
    * Fetch credentials for the specified user.
    *
    * If no credentials are available, requests authorization.
+   * 
+   * Améliorations :
+   * - Validation du refresh token avant utilisation
+   * - Retry automatique si le refresh token est invalide
+   * - Force le consentement OAuth pour garantir refresh token
+   * - Meilleure gestion des erreurs
    *
    * @param {String} user ID (email address) of user to get credentials for.
    * @param {String} scopes Authorization scopes to request
@@ -99,20 +95,36 @@ export default class UserAuthorizer {
       this.clientSecret,
       this.redirectUrl
     );
+
     oauth2Client.on('tokens', (tokens: Credentials) => {
       if (tokens.refresh_token) {
         debug('Saving refresh token');
-        this.db.data[user] = tokens;
+        // Stocker les tokens avec timestamp pour validation
+        const credentialsWithTimestamp = {
+          ...tokens,
+          timestamp: Date.now()
+        };
+        this.db.data[user] = credentialsWithTimestamp;
         this.db.write();
       }
     });
 
     const tokens = this.db.data[user];
-    if (tokens) {
+    if (tokens && this.isTokenValid(tokens)) {
       debug('User previously authorized, refreshing');
       oauth2Client.setCredentials(tokens);
-      await oauth2Client.getAccessToken();
-      return oauth2Client;
+      
+      try {
+        // Tenter de récupérer un nouveau access token
+        await oauth2Client.getAccessToken();
+        return oauth2Client;
+      } catch (error) {
+        debug('Failed to refresh token, requiring re-authorization:', error.message);
+        // Supprimer le token invalide
+        delete this.db.data[user];
+        this.db.write();
+        // Continuer vers la nouvelle autorisation
+      }
     }
 
     debug('Challenging for authorization');
@@ -120,14 +132,59 @@ export default class UserAuthorizer {
       access_type: 'offline',
       scope: scopes,
       login_hint: user,
+      prompt: 'consent' // Force le consentement pour obtenir un refresh token
     });
+
     const code = await this.prompt(authUrl);
-    const tokenResponse = await oauth2Client.getToken(code);
-    oauth2Client.setCredentials(tokenResponse.tokens);
-    // Persist credentials including refresh token for future runs
-    this.db.data[user] = tokenResponse.tokens;
-    this.db.write();
-    return oauth2Client;
+    
+    try {
+      const tokenResponse = await oauth2Client.getToken(code);
+      oauth2Client.setCredentials(tokenResponse.tokens);
+      
+      // Vérifier que nous avons bien un refresh token
+      if (!tokenResponse.tokens.refresh_token) {
+        throw new Error('No refresh token received. Please revoke app access in Google Account settings and try again.');
+      }
+      
+      // Persister les credentials avec timestamp
+      const credentialsWithTimestamp = {
+        ...tokenResponse.tokens,
+        timestamp: Date.now()
+      };
+      this.db.data[user] = credentialsWithTimestamp;
+      this.db.write();
+      
+      return oauth2Client;
+    } catch (error) {
+      debug('Token exchange failed:', error.message);
+      throw new Error(`Failed to exchange authorization code: ${error.message}`);
+    }
+  }
+
+  /**
+   * Vérifie si un token est encore valide (pas trop ancien)
+   */
+  private isTokenValid(tokens: Credentials & { timestamp?: number }): boolean {
+    if (!tokens.refresh_token) {
+      return false;
+    }
+    
+    // Si pas de timestamp, considérer comme potentiellement valide mais suspect
+    if (!tokens.timestamp) {
+      debug('Token without timestamp, will attempt refresh');
+      return true;
+    }
+    
+    // Vérifier que le token n'est pas trop ancien (ex: 30 jours)
+    const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 jours
+    const age = Date.now() - tokens.timestamp;
+    
+    if (age > maxAge) {
+      debug('Token is too old, requiring re-authorization');
+      return false;
+    }
+    
+    return true;
   }
 
   /**
