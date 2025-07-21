@@ -119,7 +119,11 @@ export default class UserAuthorizer {
         await oauth2Client.getAccessToken();
         return oauth2Client;
       } catch (error) {
-        debug('Failed to refresh token, requiring re-authorization:', error.message);
+        if (error instanceof Error) {
+          debug('Failed to refresh token, requiring re-authorization:', error.message);
+        } else {
+          debug('Failed to refresh token, requiring re-authorization:', error);
+        }
         // Supprimer le token invalide
         delete this.db.data[user];
         this.db.write();
@@ -156,8 +160,12 @@ export default class UserAuthorizer {
       
       return oauth2Client;
     } catch (error) {
-      debug('Token exchange failed:', error.message);
-      throw new Error(`Failed to exchange authorization code: ${error.message}`);
+      if (error instanceof Error) {
+        debug('Token exchange failed:', error.message);
+        throw new Error(`Failed to exchange authorization code: ${error.message}`);
+      }
+      debug('Token exchange failed:', error);
+      throw new Error(`Failed to exchange authorization code: ${String(error)}`);
     }
   }
 
