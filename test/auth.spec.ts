@@ -25,6 +25,7 @@ chai.use(chaiAsPromised);
 function stubTokenRequest(): void {
   nock('https://oauth2.googleapis.com').post('/token').reply(200, {
     access_token: 'new_token',
+    refresh_token: 'refresh',
     expires_in: 3920,
     token_type: 'Bearer',
   });

@@ -2,17 +2,33 @@ import {google, slides_v1 as SlidesV1} from 'googleapis';
 import {OAuth2Client} from 'google-auth-library';
 import Debug from 'debug';
 
+export interface PlaceholderMeta {
+  objectId: string;
+  type?: string;
+  text?: string;
+  transform?: SlidesV1.Schema$AffineTransform;
+  size?: SlidesV1.Schema$Size;
+}
+
+export interface LayoutMeta {
+  objectId: string;
+  name?: string;
+  displayName?: string;
+  placeholders: PlaceholderMeta[];
+}
+
 export interface SlideMeta {
   objectId: string;
   layout?: string;
   title?: string;
   index: number;
+  placeholders: PlaceholderMeta[];
 }
 
 export interface PresentationMeta {
   presentationId: string;
   title?: string;
-  layouts: string[];
+  layouts: LayoutMeta[];
   slides: SlideMeta[];
 }
 
@@ -59,7 +75,32 @@ export async function ensureMarkers(
     Object.assign(presentation, updated.data);
   }
 
-  const layouts = presentation.layouts?.map(l => l.layoutProperties?.name ?? '') ?? [];
+  const layouts: LayoutMeta[] = [];
+  presentation.layouts?.forEach(l => {
+    const placeholders: PlaceholderMeta[] = [];
+    l.pageElements?.forEach(el => {
+      if (el.shape?.placeholder) {
+        const text = el.shape.text?.textElements
+          ?.map(te => te.textRun?.content ?? '')
+          .join('')
+          .trim();
+        placeholders.push({
+          objectId: el.objectId ?? '',
+          type: el.shape.placeholder.type || undefined,
+          text: text || undefined,
+          transform: el.transform,
+          size: el.size,
+        });
+      }
+    });
+    layouts.push({
+      objectId: l.objectId ?? '',
+      name: l.layoutProperties?.name || undefined,
+      displayName: l.layoutProperties?.displayName || undefined,
+      placeholders,
+    });
+  });
+
   const slides: SlideMeta[] = [];
   presentation.slides?.forEach((slide, idx) => {
     const layoutId = slide.slideProperties?.layoutObjectId;
@@ -68,15 +109,36 @@ export async function ensureMarkers(
     const titleElement = slide.pageElements?.find(el =>
       el.shape?.placeholder?.type === 'TITLE'
     );
-    const textContent = titleElement?.shape?.text?.textElements?.map(te => te.textRun?.content ?? '').join('');
+    const textContent = titleElement?.shape?.text?.textElements
+      ?.map(te => te.textRun?.content ?? '')
+      .join('');
     if (textContent) {
       title = textContent.trim();
     }
+
+    const placeholders: PlaceholderMeta[] = [];
+    slide.pageElements?.forEach(el => {
+      if (el.shape?.placeholder) {
+        const text = el.shape.text?.textElements
+          ?.map(te => te.textRun?.content ?? '')
+          .join('')
+          .trim();
+        placeholders.push({
+          objectId: el.objectId ?? '',
+          type: el.shape.placeholder.type || undefined,
+          text: text || undefined,
+          transform: el.transform,
+          size: el.size,
+        });
+      }
+    });
+
     slides.push({
       objectId: slide.objectId ?? '',
       layout: layout?.layoutProperties?.displayName || undefined,
       title,
       index: idx,
+      placeholders,
     });
   });
 

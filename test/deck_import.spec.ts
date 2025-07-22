@@ -31,6 +31,7 @@ describe('ensureMarkers', () => {
     const info = await ensureMarkers(creds(), '12345');
     expect(info.slides).to.have.length(3);
     expect(info.layouts).to.be.an('array');
+    expect(info.slides[0]).to.have.property('placeholders');
     expect(nock.isDone()).to.be.true;
   });
 });
