@@ -165,52 +165,26 @@ Endpoint existant pour la compatibilité rétroactive.
 
 Endpoint existant avec upload de fichier.
 
-### 4. `/copy-slide` (NOUVEAU)
+### 4. Macros `{copy}` et `{edit}`
 
-Copier une slide existante vers une autre présentation (ou la même).
+Le service supporte désormais deux macros dans le markdown permettant de
+dupliquer ou de modifier une slide existante sans passer par un nouvel
+endpoint :
 
-**URL:** `POST /copy-slide`
-
-**Paramètres JSON:**
-
-| Paramètre | Type | Requis | Description |
-|-----------|------|--------|-------------|
-| `source_presentation_id` | string | ✅ | ID de la présentation source |
-| `slide_id` | string | ✅ | ID de la slide à copier |
-| `target_presentation_id` | string | ❌ | ID de la présentation cible (défaut: même que source) |
-| `user` | string | ❌ | Utilisateur OAuth |
-
-### Exemple
-
-```bash
-curl -X POST http://localhost:3000/copy-slide \
-  -H "Content-Type: application/json" \
-  -d '{"source_presentation_id":"1ABC","slide_id":"slide1","user":"contact@groupe-pmvb.com"}'
+```markdown
+{copy="ID_DE_LA_SLIDE"}
+{.bloc="ID_DU_BLOC"}
+Nouveau contenu du bloc
 ```
 
-### 5. `/edit-slide` (NOUVEAU)
+- `{copy=id}` crée une nouvelle slide en dupliquant celle dont l'identifiant est
+  fourni.
+- `{edit=id}` applique les mises à jour directement sur la slide existante.
+- Les attributs `{.bloc=...}` servent à cibler l'élément (texte, image ou vidéo)
+  à remplacer dans la slide copiée ou éditée.
 
-Modifier le contenu d'une slide existante.
-
-**URL:** `POST /edit-slide`
-
-**Paramètres JSON:**
-
-| Paramètre | Type | Requis | Description |
-|-----------|------|--------|-------------|
-| `presentation_id` | string | ✅ | ID de la présentation |
-| `updates` | array | ✅ | Liste des modifications d'éléments |
-| `user` | string | ❌ | Utilisateur OAuth |
-
-Chaque élément d'`updates` doit contenir un `elementId` et éventuellement `text` ou `imageUrl`.
-
-### Exemple
-
-```bash
-curl -X POST http://localhost:3000/edit-slide \
-  -H "Content-Type: application/json" \
-  -d '{"presentation_id":"1ABC","user":"contact@groupe-pmvb.com","updates":[{"elementId":"title_1","text":"Nouveau titre"}]}'
-```
+Ces macros fonctionnent avec l'endpoint `/convert-advanced` déjà présent. Il
+suffit d'inclure les directives dans le markdown envoyé à l'API.
 
 ## Concepts Clés
 
