@@ -1,5 +1,5 @@
 # Makefile pour md2googleslides
-.PHONY: help install build test clean docker-build docker-test docker-run lint fix security all ci
+.PHONY: help install build clean docker-build docker-run security all
 
 # Variables
 IMAGE_NAME := md2googleslides
@@ -13,19 +13,12 @@ help:
 	@echo ""
 	@echo "  📦 install        - Installer les dépendances npm"
 	@echo "  🔨 build          - Compiler le projet TypeScript"
-	@echo "  🧪 test           - Lancer tous les tests"
-	@echo "  🧪 test-unit      - Lancer uniquement les tests unitaires"
-	@echo "  🐳 test-docker    - Lancer les tests Docker"
-	@echo "  🔍 lint           - Vérifier le style de code"
-	@echo "  🔧 fix            - Corriger automatiquement le style"
 	@echo "  🧹 clean          - Nettoyer les fichiers de build"
 	@echo "  🐳 docker-build   - Construire l'image Docker"
-	@echo "  🐳 docker-test    - Tester l'image Docker"
 	@echo "  🐳 docker-run     - Lancer le conteneur interactif"
 	@echo "  📤 docker-push    - Pousser l'image vers le registry"
 	@echo "  🔒 security       - Lancer les tests de sécurité"
-	@echo "  🎯 ci             - Pipeline CI/CD simulé"
-	@echo "  ⚡ all            - Tout construire et tester"
+	@echo "  ⚡ all            - Tout construire"
 	@echo ""
 	@echo "📋 Environnement actuel:"
 	@echo "  Node.js: $(NODE_VERSION)"
@@ -45,46 +38,12 @@ install:
 # Compilation
 build: install
 	@echo "🔨 Compilation du projet..."
-	@npm run clean || true
 	@npm run compile
 	@echo "✅ Build terminé"
-
-# Tests complets
-test: build
-	@echo "🧪 Lancement de tous les tests..."
-	@chmod +x scripts/test.sh
-	@./scripts/test.sh
-	@echo "✅ Tests terminés"
-
-# Tests unitaires seulement
-test-unit: build
-	@echo "🧪 Tests unitaires..."
-	@npm test
-	@echo "✅ Tests unitaires terminés"
-
-# Tests Docker seulement
-test-docker: docker-build
-	@echo "🐳 Tests Docker..."
-	@chmod +x scripts/test-docker.sh
-	@./scripts/test-docker.sh
-	@echo "✅ Tests Docker terminés"
-
-# Linting
-lint: install
-	@echo "🔍 Vérification du style de code..."
-	@npm run lint
-	@echo "✅ Linting terminé"
-
-# Correction automatique
-fix: install
-	@echo "🔧 Correction automatique du style..."
-	@npm run fix
-	@echo "✅ Corrections appliquées"
 
 # Nettoyage
 clean:
 	@echo "🧹 Nettoyage..."
-	@npm run clean || true
 	@rm -rf node_modules package-lock.json || true
 	@docker rmi $(IMAGE_NAME):$(TAG) 2>/dev/null || true
 	@docker rmi $(IMAGE_NAME):test 2>/dev/null || true
@@ -95,12 +54,6 @@ docker-build:
 	@echo "🐳 Construction de l'image Docker..."
 	@docker build -t $(IMAGE_NAME):$(TAG) .
 	@echo "✅ Image Docker construite: $(IMAGE_NAME):$(TAG)"
-
-# Test Docker
-docker-test: docker-build
-	@echo "🐳 Test de l'image Docker..."
-	@docker run --rm $(IMAGE_NAME):$(TAG) --help
-	@echo "✅ Test Docker réussi"
 
 # Lancement interactif
 docker-run: docker-build
@@ -129,13 +82,9 @@ security:
 	fi
 	@echo "✅ Audit de sécurité terminé"
 
-# Pipeline CI/CD simulé
-ci: clean install build test-unit lint security docker-build docker-test
-	@echo "🎯 Pipeline CI/CD simulé avec succès!"
-
-# Construction et tests complets
-all: ci
-	@echo "⚡ Construction et tests complets terminés!"
+# Construction complète
+all: clean install build docker-build security
+	@echo "⚡ Construction complète terminée!"
 
 # Commandes Docker Compose
 compose-up:
@@ -147,17 +96,10 @@ compose-down:
 compose-logs:
 	@docker-compose logs -f
 
-compose-test:
-	@docker-compose --profile test up --build md2googleslides-test
-
 # Utilitaires de développement
 watch:
 	@echo "👀 Mode watch pour le développement..."
 	@npm run compile -- --watch
-
-debug:
-	@echo "🐛 Mode debug..."
-	@npm run test-debug
 
 # Métriques et monitoring
 metrics:
@@ -189,7 +131,7 @@ dev: install build
 	@echo "Utilisez 'npm run exec' pour tester rapidement"
 
 # Préparation pour production
-prod: clean install build test docker-build security
+prod: clean install build docker-build security
 	@echo "🚀 Prêt pour la production!"
 
 # Test de performance simple
