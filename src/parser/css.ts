@@ -30,18 +30,23 @@ export interface Stylesheet {
   [key: string]: CssRule;
 }
 
-function parseColorString(hexString: string): Color | undefined {
-  const c = parseColor(hexString);
-  if (!c.rgba) {
-    return;
+function parseColorString(str: string): Color | undefined {
+  const c = parseColor(str);
+  if (c.rgba) {
+    return {
+      opaqueColor: {
+        rgbColor: {
+          red: c.rgba[0] / 255,
+          green: c.rgba[1] / 255,
+          blue: c.rgba[2] / 255,
+        },
+      },
+    };
   }
+  // If parse-color can't handle the value, assume it's a theme color name
   return {
     opaqueColor: {
-      rgbColor: {
-        red: c.rgba[0] / 255,
-        green: c.rgba[1] / 255,
-        blue: c.rgba[2] / 255,
-      },
+      themeColor: str.toUpperCase(),
     },
   };
 }
@@ -69,6 +74,12 @@ export function updateStyleDefinition(
     switch (key) {
       case 'color':
         style.foregroundColor = parseColorString(value);
+        break;
+      case 'themeColor':
+      case 'theme-color':
+        style.foregroundColor = {
+          opaqueColor: {themeColor: (value as string).toUpperCase()},
+        };
         break;
       case 'backgroundColor':
         style.backgroundColor = parseColorString(value);

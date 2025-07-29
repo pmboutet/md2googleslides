@@ -55,6 +55,16 @@ Some text with *emphasis* and an image:
 ![](https://picsum.photos/800/600)
 ```
 
+### Lists and colors
+
+Bullet lists can start with `-`, `•`, `→` or `★` and numbered lists use the usual `1.` notation. Indent items to create nested lists.
+
+Text color can be set using inline CSS. If the color value isn't a standard CSS color, it is interpreted as a theme color name from your presentation template:
+
+```markdown
+<span style="color: ACCENT1">Themed text</span>
+```
+
 ## Development
 
 Requires Node.js 18+.

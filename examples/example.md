@@ -144,6 +144,24 @@ Dogs   | 75 million
 Birds  | 16 million
 
 ---
+# Lists
+
+• Premier point
+→ Deuxième point
+★ Troisième point
+
+1. Premier élément
+2. Deuxième élément
+3. Troisième élément
+
+- Point principal 1
+  - Sous-point 1.1
+  - Sous-point 1.2
+- Point principal 2
+  - Sous-point 2.1
+  - Sous-point 2.2
+
+---
 # Some inline HTML and CSS is supported
 
 Use <span style="color:red">span</span> to color text.

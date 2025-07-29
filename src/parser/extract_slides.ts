@@ -32,6 +32,7 @@ function preprocessMarkdown(markdown: string): string {
   const out: string[] = [];
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    // Support slide separators
     const match = line.match(/^---\s*(\{.*\})?\s*$/);
     if (match) {
       if (out.length > 0 && out[out.length - 1].trim() !== '') {
@@ -41,6 +42,12 @@ function preprocessMarkdown(markdown: string): string {
       if (match[1]) {
         out.push(match[1].trim());
       }
+      continue;
+    }
+    // Convert non standard bullet markers to markdown compatible ones
+    const bullet = line.match(/^(\s*)([\u2022\u2192\u2605])\s+/); // • → ★
+    if (bullet) {
+      out.push(`${bullet[1]}- ${line.slice(bullet[0].length)}`);
       continue;
     }
     out.push(line);
