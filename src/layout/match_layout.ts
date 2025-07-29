@@ -29,14 +29,17 @@ export default function matchLayout(
   presentation: SlidesV1.Schema$Presentation,
   slide: SlideDefinition
 ): GenericLayout {
-  // if we have manually set the slide layout get the master from the presentation
   let layoutName: string | undefined = undefined;
   if (slide.customLayout !== undefined) {
     const layout = presentation.layouts?.find(
-      layout => layout.layoutProperties?.displayName === slide.customLayout
+      layout =>
+        layout.layoutProperties?.displayName === slide.customLayout ||
+        layout.layoutProperties?.name === slide.customLayout
     );
     if (layout?.layoutProperties?.name) {
       layoutName = layout.layoutProperties.name;
+    } else {
+      layoutName = slide.customLayout;
     }
   }
   if (layoutName === undefined) {
