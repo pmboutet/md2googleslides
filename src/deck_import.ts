@@ -10,6 +10,17 @@ export interface PlaceholderMeta {
   size?: SlidesV1.Schema$Size;
 }
 
+export interface ElementMeta {
+  objectId: string;
+  elementType: string;
+  placeholderType?: string;
+  text?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  transform?: SlidesV1.Schema$AffineTransform;
+  size?: SlidesV1.Schema$Size;
+}
+
 export interface LayoutMeta {
   objectId: string;
   name?: string;
@@ -23,6 +34,7 @@ export interface SlideMeta {
   title?: string;
   index: number;
   placeholders: PlaceholderMeta[];
+  elements: ElementMeta[];
 }
 
 export interface PresentationMeta {
@@ -117,6 +129,7 @@ export async function ensureMarkers(
     }
 
     const placeholders: PlaceholderMeta[] = [];
+    const elements: ElementMeta[] = [];
     slide.pageElements?.forEach(el => {
       if (el.shape?.placeholder) {
         const text = el.shape.text?.textElements
@@ -131,6 +144,49 @@ export async function ensureMarkers(
           size: el.size,
         });
       }
+
+      const elem: ElementMeta = {
+        objectId: el.objectId ?? '',
+        elementType: el.shape
+          ? 'shape'
+          : el.image
+          ? 'image'
+          : el.video
+          ? 'video'
+          : el.table
+          ? 'table'
+          : el.line
+          ? 'line'
+          : el.sheetsChart
+          ? 'sheetsChart'
+          : el.wordArt
+          ? 'wordArt'
+          : el.elementGroup
+          ? 'group'
+          : 'unknown',
+        placeholderType:
+          el.shape?.placeholder?.type || el.image?.placeholder?.type || undefined,
+        transform: el.transform,
+        size: el.size,
+      };
+
+      if (el.shape) {
+        const text = el.shape.text?.textElements
+          ?.map(te => te.textRun?.content ?? '')
+          .join('')
+          .trim();
+        if (text) {
+          elem.text = text;
+        }
+      }
+      if (el.image) {
+        elem.imageUrl = el.image.sourceUrl || el.image.contentUrl || undefined;
+      }
+      if (el.video) {
+        elem.videoUrl = el.video.url || undefined;
+      }
+
+      elements.push(elem);
     });
 
     slides.push({
@@ -139,6 +195,7 @@ export async function ensureMarkers(
       title,
       index: idx,
       placeholders,
+      elements,
     });
   });
 

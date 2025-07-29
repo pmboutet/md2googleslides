@@ -50,12 +50,24 @@ interface SlideMeta {
   title?: string;
   index: number;
   placeholders: PlaceholderMeta[];
+  elements: ElementMeta[];
 }
 
 interface PlaceholderMeta {
   objectId: string;
   type?: string;
   text?: string;
+  transform?: AffineTransform;
+  size?: Size;
+}
+
+interface ElementMeta {
+  objectId: string;
+  elementType: string;
+  placeholderType?: string;
+  text?: string;
+  imageUrl?: string;
+  videoUrl?: string;
   transform?: AffineTransform;
   size?: Size;
 }
@@ -133,6 +145,14 @@ console.log('Nombre de slides:', metadata.presentation.slides.length);
           {
             "objectId": "title_obj_1",
             "type": "TITLE",
+            "text": "Ma Présentation"
+          }
+        ],
+        "elements": [
+          {
+            "objectId": "title_obj_1",
+            "elementType": "shape",
+            "placeholderType": "TITLE",
             "text": "Ma Présentation"
           }
         ]
