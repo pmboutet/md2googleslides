@@ -85,17 +85,62 @@ export default class GenericLayout {
   public appendContentRequests(
     requests: SlidesV1.Schema$Request[]
   ): SlidesV1.Schema$Request[] {
-    this.appendFillPlaceholderTextRequest(this.slide.title, 'TITLE', requests);
-    this.appendFillPlaceholderTextRequest(
+    let titlePlaced = this.appendFillPlaceholderTextRequest(
       this.slide.title,
-      'CENTERED_TITLE',
+      'TITLE',
       requests
     );
-    this.appendFillPlaceholderTextRequest(
+    if (!titlePlaced) {
+      titlePlaced = this.appendFillPlaceholderTextRequest(
+        this.slide.title,
+        'CENTERED_TITLE',
+        requests
+      );
+    }
+    let subtitlePlaced = this.appendFillPlaceholderTextRequest(
       this.slide.subtitle,
       'SUBTITLE',
       requests
     );
+
+    if (this.slide.title && !titlePlaced) {
+      if (!subtitlePlaced) {
+        subtitlePlaced = this.appendFillPlaceholderTextRequest(
+          this.slide.title,
+          'SUBTITLE',
+          requests
+        );
+      }
+      if (!subtitlePlaced) {
+        if (!this.slide.bodies.length) {
+          this.slide.bodies.push({
+            text: this.slide.title,
+            images: [],
+            videos: [],
+          });
+        } else {
+          this.slide.bodies[0].text = this.mergeTextDefinitions(
+            this.slide.title,
+            this.slide.bodies[0].text
+          );
+        }
+      }
+    }
+
+    if (this.slide.subtitle && !subtitlePlaced) {
+      if (!this.slide.bodies.length) {
+        this.slide.bodies.push({
+          text: this.slide.subtitle,
+          images: [],
+          videos: [],
+        });
+      } else {
+        this.slide.bodies[0].text = this.mergeTextDefinitions(
+          this.slide.subtitle,
+          this.slide.bodies[0].text
+        );
+      }
+    }
 
     if (this.slide.backgroundImage) {
       this.appendSetBackgroundImageRequest(
@@ -115,19 +160,32 @@ export default class GenericLayout {
         this.slide.objectId,
         'BODY'
       );
-      const bodyCount = Math.min(
-        bodyElements?.length ?? 0,
-        this.slide.bodies.length
-      );
-      for (let i = 0; i < bodyCount; ++i) {
-        const placeholder = bodyElements![i];
-        const body = this.slide.bodies[i];
-        this.appendFillPlaceholderTextRequest(body.text, placeholder, requests);
-        if (body.images && body.images.length) {
-          this.appendCreateImageRequests(body.images, placeholder, requests);
+      if (bodyElements && bodyElements.length) {
+        if (this.slide.bodies.length > bodyElements.length) {
+          const last = this.slide.bodies[bodyElements.length - 1];
+          for (let i = bodyElements.length; i < this.slide.bodies.length; ++i) {
+            const extra = this.slide.bodies[i];
+            if (extra.text) {
+              last.text = this.mergeTextDefinitions(extra.text, last.text);
+            }
+            last.images = last.images.concat(extra.images);
+            last.videos = last.videos.concat(extra.videos);
+          }
         }
-        if (body.videos && body.videos.length) {
-          this.appendCreateVideoRequests(body.videos, placeholder, requests);
+        const bodyCount = Math.min(
+          bodyElements.length,
+          this.slide.bodies.length
+        );
+        for (let i = 0; i < bodyCount; ++i) {
+          const placeholder = bodyElements[i];
+          const body = this.slide.bodies[i];
+          this.appendFillPlaceholderTextRequest(body.text, placeholder, requests);
+          if (body.images && body.images.length) {
+            this.appendCreateImageRequests(body.images, placeholder, requests);
+          }
+          if (body.videos && body.videos.length) {
+            this.appendCreateVideoRequests(body.videos, placeholder, requests);
+          }
         }
       }
     }
@@ -152,10 +210,10 @@ export default class GenericLayout {
     value: TextDefinition | undefined,
     placeholder: string | SlidesV1.Schema$PageElement,
     requests: SlidesV1.Schema$Request[]
-  ): void {
+  ): boolean {
     if (!value) {
       debug('No text for placeholder %s');
-      return;
+      return false;
     }
 
     if (typeof placeholder === 'string') {
@@ -167,7 +225,7 @@ export default class GenericLayout {
       );
       if (!pageElements) {
         debug('Skipping undefined placeholder %s', placeholder);
-        return;
+        return false;
       }
       placeholder = pageElements[0];
     }
@@ -177,6 +235,7 @@ export default class GenericLayout {
       {objectId: placeholder.objectId},
       requests
     );
+    return true;
   }
 
   protected appendInsertTextRequests(
@@ -498,6 +557,42 @@ export default class GenericLayout {
       x: 0,
       y: 0,
     };
+  }
+
+  private mergeTextDefinitions(
+    source: TextDefinition,
+    target?: TextDefinition
+  ): TextDefinition {
+    const result: TextDefinition = target
+      ? {
+          rawText: target.rawText,
+          textRuns: [...target.textRuns],
+          listMarkers: [...target.listMarkers],
+          big: target.big || false,
+        }
+      : { rawText: '', textRuns: [], listMarkers: [], big: false };
+
+    const offset = result.rawText.length;
+    if (offset > 0 && !result.rawText.endsWith('\n')) {
+      result.rawText += '\n';
+    }
+    result.rawText += source.rawText;
+    for (const run of source.textRuns) {
+      result.textRuns.push({
+        ...run,
+        start: (run.start ?? 0) + offset,
+        end: (run.end ?? 0) + offset,
+      });
+    }
+    for (const marker of source.listMarkers) {
+      result.listMarkers.push({
+        ...marker,
+        start: (marker.start ?? 0) + offset,
+        end: (marker.end ?? 0) + offset,
+      });
+    }
+    result.big = result.big || source.big;
+    return result;
   }
 
   protected computeShallowFieldMask(object: Record<string, unknown>): string {

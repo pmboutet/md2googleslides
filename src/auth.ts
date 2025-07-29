@@ -37,7 +37,7 @@ interface CredentialsDb {
 
 /**
  * Handles the authorization flow, intended for command line usage.
- * 
+ *
  * Améliorations OAuth v2.0:
  * - Meilleure gestion des refresh tokens
  * - Retry automatique en cas d'échec
@@ -75,7 +75,7 @@ export default class UserAuthorizer {
    * Fetch credentials for the specified user.
    *
    * If no credentials are available, requests authorization.
-   * 
+   *
    * Améliorations :
    * - Validation du refresh token avant utilisation
    * - Retry automatique si le refresh token est invalide
@@ -113,7 +113,7 @@ export default class UserAuthorizer {
     if (tokens && this.isTokenValid(tokens)) {
       debug('User previously authorized, refreshing');
       oauth2Client.setCredentials(tokens);
-      
+
       try {
         // Tenter de récupérer un nouveau access token
         await oauth2Client.getAccessToken();
@@ -140,16 +140,16 @@ export default class UserAuthorizer {
     });
 
     const code = await this.prompt(authUrl);
-    
+
     try {
       const tokenResponse = await oauth2Client.getToken(code);
       oauth2Client.setCredentials(tokenResponse.tokens);
-      
+
       // Vérifier que nous avons bien un refresh token
       if (!tokenResponse.tokens.refresh_token) {
         throw new Error('No refresh token received. Please revoke app access in Google Account settings and try again.');
       }
-      
+
       // Persister les credentials avec timestamp
       const credentialsWithTimestamp = {
         ...tokenResponse.tokens,
@@ -157,7 +157,7 @@ export default class UserAuthorizer {
       };
       this.db.data[user] = credentialsWithTimestamp;
       this.db.write();
-      
+
       return oauth2Client;
     } catch (error) {
       if (error instanceof Error) {
@@ -176,22 +176,22 @@ export default class UserAuthorizer {
     if (!tokens.refresh_token) {
       return false;
     }
-    
+
     // Si pas de timestamp, considérer comme potentiellement valide mais suspect
     if (!tokens.timestamp) {
       debug('Token without timestamp, will attempt refresh');
       return true;
     }
-    
+
     // Vérifier que le token n'est pas trop ancien (ex: 30 jours)
     const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 jours
     const age = Date.now() - tokens.timestamp;
-    
+
     if (age > maxAge) {
       debug('Token is too old, requiring re-authorization');
       return false;
     }
-    
+
     return true;
   }
 
