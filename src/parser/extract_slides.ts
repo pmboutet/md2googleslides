@@ -50,6 +50,19 @@ function preprocessMarkdown(markdown: string): string {
       out.push(`${bullet[1]}- ${line.slice(bullet[0].length)}`);
       continue;
     }
+    // Handle column marker followed by text on the same line
+    const columnMatch = line.match(/^(\s*)\{\.column\}\s*(.*)$/);
+    if (columnMatch) {
+      if (out.length > 0 && out[out.length - 1].trim() !== '') {
+        out.push('');
+      }
+      out.push(`${columnMatch[1]}{.column}`);
+      if (columnMatch[2]) {
+        out.push('');
+        out.push(`${columnMatch[1]}${columnMatch[2]}`);
+      }
+      continue;
+    }
     out.push(line);
   }
   return out.join('\n');
