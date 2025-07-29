@@ -27,6 +27,27 @@ import assert from 'assert';
 
 const debug = Debug('md2gslides');
 
+function preprocessMarkdown(markdown: string): string {
+  const lines = markdown.split(/\r?\n/);
+  const out: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const match = line.match(/^---\s*(\{.*\})?\s*$/);
+    if (match) {
+      if (out.length > 0 && out[out.length - 1].trim() !== '') {
+        out.push('');
+      }
+      out.push('---');
+      if (match[1]) {
+        out.push(match[1].trim());
+      }
+      continue;
+    }
+    out.push(line);
+  }
+  return out.join('\n');
+}
+
 type MarkdownRuleFn = (token: Token, context: Context) => void;
 interface MarkdownRules {
   [k: string]: MarkdownRuleFn;
@@ -554,7 +575,7 @@ export default function extractSlides(
   markdown: string,
   stylesheet?: string
 ): SlideDefinition[] {
-  const tokens = parseMarkdown(markdown);
+  const tokens = parseMarkdown(preprocessMarkdown(markdown));
   const css = parseStyleSheet(stylesheet);
   const context = new Context(css);
   ruleSet = fullTokenRules; // TODO - Make not global
