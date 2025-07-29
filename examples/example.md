@@ -66,6 +66,11 @@ This is the *left* column
 ![](https://picsum.photos/g/1600/900)
 
 ---
+# Inline column markers
+
+This is the left {.column} and this is the right
+
+---
 
 # Slides can have background images
 
