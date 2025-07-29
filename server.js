@@ -6,6 +6,7 @@ const os = require('os');
 const path = require('path');
 const { OAuth2Client } = require('google-auth-library');
 const { ensureMarkers } = require('./lib/src/deck_import');
+const { copySlide, editSlide } = require('./lib/src/deck_import');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -466,6 +467,68 @@ app.get('/discover', async (req, res) => {
     } catch (err) {
         console.error('Discovery error:', err);
         res.status(500).json({ error: 'Failed to discover presentation' });
+    }
+});
+
+// Duplicate a slide from a presentation
+app.post('/copy-slide', async (req, res) => {
+    const { source_presentation_id, slide_id, user } = req.body;
+
+    if (!source_presentation_id || !slide_id) {
+        return res.status(400).json({ error: 'Missing source_presentation_id or slide_id' });
+    }
+
+    const userEmail = user || 'default';
+    if (!getStoredToken(userEmail)) {
+        const authUrl = generateAuthUrl(userEmail);
+        if (!authUrl) {
+            return res.status(500).json({ error: 'authorization_failed', message: 'Failed to generate authorization URL' });
+        }
+        return res.status(401).json({ error: 'authorization_required', auth_url: authUrl, message: 'Please authorize this app by visiting the URL provided' });
+    }
+
+    const client = getAuthorizedClient(userEmail);
+    if (!client) {
+        return res.status(500).json({ error: 'Failed to create OAuth client' });
+    }
+
+    try {
+        const newId = await copySlide(client, source_presentation_id, slide_id);
+        res.json({ success: true, slide_id: newId });
+    } catch (err) {
+        console.error('Copy slide error:', err);
+        res.status(500).json({ error: 'Failed to copy slide' });
+    }
+});
+
+// Edit existing slide elements
+app.post('/edit-slide', async (req, res) => {
+    const { presentation_id, updates, user } = req.body;
+
+    if (!presentation_id || !Array.isArray(updates)) {
+        return res.status(400).json({ error: 'Missing presentation_id or updates' });
+    }
+
+    const userEmail = user || 'default';
+    if (!getStoredToken(userEmail)) {
+        const authUrl = generateAuthUrl(userEmail);
+        if (!authUrl) {
+            return res.status(500).json({ error: 'authorization_failed', message: 'Failed to generate authorization URL' });
+        }
+        return res.status(401).json({ error: 'authorization_required', auth_url: authUrl, message: 'Please authorize this app by visiting the URL provided' });
+    }
+
+    const client = getAuthorizedClient(userEmail);
+    if (!client) {
+        return res.status(500).json({ error: 'Failed to create OAuth client' });
+    }
+
+    try {
+        await editSlide(client, presentation_id, updates);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Edit slide error:', err);
+        res.status(500).json({ error: 'Failed to edit slide' });
     }
 });
 

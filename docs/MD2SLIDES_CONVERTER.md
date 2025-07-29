@@ -165,6 +165,53 @@ Endpoint existant pour la compatibilité rétroactive.
 
 Endpoint existant avec upload de fichier.
 
+### 4. `/copy-slide` (NOUVEAU)
+
+Copier une slide existante vers une autre présentation (ou la même).
+
+**URL:** `POST /copy-slide`
+
+**Paramètres JSON:**
+
+| Paramètre | Type | Requis | Description |
+|-----------|------|--------|-------------|
+| `source_presentation_id` | string | ✅ | ID de la présentation source |
+| `slide_id` | string | ✅ | ID de la slide à copier |
+| `target_presentation_id` | string | ❌ | ID de la présentation cible (défaut: même que source) |
+| `user` | string | ❌ | Utilisateur OAuth |
+
+### Exemple
+
+```bash
+curl -X POST http://localhost:3000/copy-slide \
+  -H "Content-Type: application/json" \
+  -d '{"source_presentation_id":"1ABC","slide_id":"slide1","user":"contact@groupe-pmvb.com"}'
+```
+
+### 5. `/edit-slide` (NOUVEAU)
+
+Modifier le contenu d'une slide existante.
+
+**URL:** `POST /edit-slide`
+
+**Paramètres JSON:**
+
+| Paramètre | Type | Requis | Description |
+|-----------|------|--------|-------------|
+| `presentation_id` | string | ✅ | ID de la présentation |
+| `updates` | array | ✅ | Liste des modifications d'éléments |
+| `user` | string | ❌ | Utilisateur OAuth |
+
+Chaque élément d'`updates` doit contenir un `elementId` et éventuellement `text` ou `imageUrl`.
+
+### Exemple
+
+```bash
+curl -X POST http://localhost:3000/edit-slide \
+  -H "Content-Type: application/json" \
+  -d '{"presentation_id":"1ABC","user":"contact@groupe-pmvb.com","updates":[{"elementId":"title_1","text":"Nouveau titre"}]}'
+```
+
 ## Concepts Clés
 
 ### Template ID vs Append ID
