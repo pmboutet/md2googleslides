@@ -23,6 +23,7 @@ import {OAuth2Client} from 'google-auth-library';
 import probeImage from './images/probe';
 import maybeGenerateImage from './images/generate';
 import assert from 'assert';
+import {extractFontsFromSlides, preloadFontMetrics} from './font-metrics';
 
 const debug = Debug('md2gslides');
 
@@ -139,6 +140,14 @@ export default class SlideGenerator {
     assert(this.presentation?.presentationId);
     this.slides = extractSlides(markdown, css);
     this.allowUpload = useFileio;
+    
+    // Pre-load font metrics for optimal performance
+    debug('Pre-loading font metrics for slides');
+    const fonts = extractFontsFromSlides(this.slides);
+    if (fonts.size > 0) {
+      preloadFontMetrics(Array.from(fonts));
+    }
+    
     await this.generateImages();
     await this.probeImageSizes();
     await this.uploadLocalImages();
@@ -223,7 +232,7 @@ export default class SlideGenerator {
   }
 
   /**
-   * 1st pass at generation -- creates slides using the apporpriate
+   * 1st pass at generation -- creates slides using the appopriate
    * layout based on the content.
    *
    * Note this only returns the batch requests, but does not execute it.
