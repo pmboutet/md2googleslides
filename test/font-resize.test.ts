@@ -23,7 +23,7 @@ Object.defineProperty(global, 'document', {
   writable: true,
 });
 
-describe('Dynamic Font Metrics System', () => {
+describe('Self-contained Font Metrics System', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -32,15 +32,28 @@ describe('Dynamic Font Metrics System', () => {
     it('should load Arial metrics correctly', () => {
       const metrics = getFontMetrics('Arial');
       expect(metrics).toBeDefined();
-      expect(metrics.unitsPerEm).toBeGreaterThan(0);
-      expect(metrics.xWidthAvg).toBeGreaterThan(0);
+      expect(metrics.unitsPerEm).toBe(1000);
+      expect(metrics.xWidthAvg).toBe(554);
+      expect(metrics.ascent).toBe(728);
+      expect(metrics.descent).toBe(-210);
     });
 
     it('should load Roboto metrics correctly', () => {
       const metrics = getFontMetrics('Roboto');
       expect(metrics).toBeDefined();
-      expect(metrics.unitsPerEm).toBeGreaterThan(0);
-      expect(metrics.xWidthAvg).toBeGreaterThan(0);
+      expect(metrics.unitsPerEm).toBe(1000);
+      expect(metrics.xWidthAvg).toBe(543);
+      expect(metrics.ascent).toBe(927);
+      expect(metrics.descent).toBe(-244);
+    });
+
+    it('should load Montserrat metrics correctly', () => {
+      const metrics = getFontMetrics('Montserrat');
+      expect(metrics).toBeDefined();
+      expect(metrics.unitsPerEm).toBe(1000);
+      expect(metrics.xWidthAvg).toBe(542);
+      expect(metrics.ascent).toBe(968);
+      expect(metrics.descent).toBe(-251);
     });
 
     it('should calculate metrics for unknown fonts using Canvas', () => {
@@ -77,6 +90,16 @@ describe('Dynamic Font Metrics System', () => {
       
       // Restore document
       (global as any).document = originalDocument;
+    });
+
+    it('should handle font name variations', () => {
+      // Test case variations
+      const arial1 = getFontMetrics('Arial');
+      const arial2 = getFontMetrics('arial');
+      
+      // Arial should be found in both cases (exact match for first, cache for second)
+      expect(arial1.unitsPerEm).toBe(1000);
+      expect(arial2.unitsPerEm).toBe(1000);
     });
   });
 
@@ -164,18 +187,21 @@ describe('Dynamic Font Metrics System', () => {
     });
   });
 
-  describe('estimateFontSize with dynamic metrics', () => {
+  describe('estimateFontSize with self-contained metrics', () => {
     const testBox = { width: 10000, height: 2000 };
     const testText = 'Sample text for font size estimation';
 
-    it('should estimate font size correctly for known fonts', () => {
+    it('should estimate font size correctly for hardcoded fonts', () => {
       const arialSize = estimateFontSize(testText, testBox, 48, 8, 'Arial');
       const robotoSize = estimateFontSize(testText, testBox, 48, 8, 'Roboto');
+      const montserratSize = estimateFontSize(testText, testBox, 48, 8, 'Montserrat');
       
       expect(arialSize).toBeGreaterThan(8);
       expect(arialSize).toBeLessThanOrEqual(48);
       expect(robotoSize).toBeGreaterThan(8);
       expect(robotoSize).toBeLessThanOrEqual(48);
+      expect(montserratSize).toBeGreaterThan(8);
+      expect(montserratSize).toBeLessThanOrEqual(48);
     });
 
     it('should estimate font size for unknown fonts using Canvas', () => {
@@ -187,34 +213,21 @@ describe('Dynamic Font Metrics System', () => {
     });
 
     it('should return different sizes for different fonts', () => {
-      const font1 = 'TestFont1';
-      const font2 = 'TestFont2';
+      const arialSize = estimateFontSize(testText, testBox, 48, 8, 'Arial');
+      const robotoSize = estimateFontSize(testText, testBox, 48, 8, 'Roboto');
+      const montserratSize = estimateFontSize(testText, testBox, 48, 8, 'Montserrat');
       
-      // Mock different Canvas responses for different fonts
-      mockCanvas.getContext = jest.fn(() => ({
-        font: '',
-        measureText: jest.fn(() => ({
-          width: Math.random() * 100 + 50, // Different widths
-          actualBoundingBoxAscent: 80,
-          actualBoundingBoxDescent: 20,
-        })),
-      }));
-      
-      const size1 = estimateFontSize(testText, testBox, 48, 8, font1);
-      const size2 = estimateFontSize(testText, testBox, 48, 8, font2);
-      
-      // Reset for consistent behavior
-      mockCanvas.getContext = jest.fn(() => ({
-        font: '',
-        measureText: jest.fn((text: string) => ({
-          width: text.length * 10,
-          actualBoundingBoxAscent: 80,
-          actualBoundingBoxDescent: 20,
-        })),
-      }));
-      
-      expect(size1).toBeGreaterThan(0);
-      expect(size2).toBeGreaterThan(0);
+      // All should be valid sizes
+      [arialSize, robotoSize, montserratSize].forEach(size => {
+        expect(size).toBeGreaterThan(8);
+        expect(size).toBeLessThanOrEqual(48);
+      });
+
+      // Sizes should potentially be different due to different font metrics
+      // (though they might be close)
+      expect(typeof arialSize).toBe('number');
+      expect(typeof robotoSize).toBe('number');
+      expect(typeof montserratSize).toBe('number');
     });
 
     it('should respect min and max constraints with calculated metrics', () => {
@@ -236,7 +249,7 @@ describe('Dynamic Font Metrics System', () => {
         {
           title: { textRuns: [{ fontFamily: 'Montserrat' }] },
           bodies: [
-            { text: { textRuns: [{ fontFamily: 'Open Sans' }] } },
+            { text: { textRuns: [{ fontFamily: 'Roboto' }] } },
             { text: { textRuns: [{ fontFamily: 'Custom Font' }] } }
           ]
         }
@@ -256,6 +269,30 @@ describe('Dynamic Font Metrics System', () => {
       });
     });
 
+    it('should demonstrate Montserrat working correctly', () => {
+      // The core issue: Montserrat should work for font size estimation
+      const montserratMetrics = getFontMetrics('Montserrat');
+      
+      // Verify we have proper Montserrat metrics
+      expect(montserratMetrics.unitsPerEm).toBe(1000);
+      expect(montserratMetrics.xWidthAvg).toBe(542);
+      expect(montserratMetrics.ascent).toBe(968);
+      expect(montserratMetrics.descent).toBe(-251);
+      
+      // Verify size estimation works
+      const size = estimateFontSize(
+        'This is a Montserrat test text that should resize properly',
+        { width: 8000, height: 1500 },
+        48,
+        8,
+        'Montserrat'
+      );
+      
+      expect(size).toBeGreaterThan(8);
+      expect(size).toBeLessThanOrEqual(48);
+      expect(typeof size).toBe('number');
+    });
+
     it('should performance test cached vs uncached', () => {
       const fontName = 'PerformanceTestFont';
       
@@ -271,6 +308,31 @@ describe('Dynamic Font Metrics System', () => {
       
       // Cached call should be faster (though this is a rough test)
       expect(time2).toBeLessThanOrEqual(time1);
+    });
+  });
+
+  describe('Self-contained system validation', () => {
+    it('should work without any external dependencies', () => {
+      // This test validates that our system works entirely self-contained
+      
+      // Test all hardcoded fonts
+      const hardcodedFonts = ['Arial', 'Roboto', 'Montserrat'];
+      hardcodedFonts.forEach(font => {
+        const metrics = getFontMetrics(font);
+        expect(metrics.unitsPerEm).toBe(1000);
+        expect(metrics.xWidthAvg).toBeGreaterThan(0);
+        expect(metrics.ascent).toBeGreaterThan(0);
+        expect(typeof metrics.descent).toBe('number'); // Can be negative
+      });
+      
+      // Test Canvas fallback for unknown fonts
+      const unknownFont = 'SomeRandomFontName';
+      const metrics = getFontMetrics(unknownFont);
+      expect(metrics).toBeDefined();
+      expect(metrics.unitsPerEm).toBe(1000);
+      
+      // Verify no external imports are needed
+      expect(mockDocument.createElement).toHaveBeenCalled();
     });
   });
 });

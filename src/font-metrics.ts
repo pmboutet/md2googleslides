@@ -1,8 +1,3 @@
-import arial from '@capsize/metrics/arial';
-import roboto from '@capsize/metrics/roboto';
-import {fontFamilyToCamelCase} from '@capsize/metrics';
-import {entireMetricsCollection} from '@capsize/metrics/entireMetricsCollection';
-
 export interface CapsizeMetrics {
   ascent: number;
   descent: number;
@@ -11,19 +6,39 @@ export interface CapsizeMetrics {
   xWidthAvg: number;
 }
 
-const METRICS: Record<string, CapsizeMetrics> = {
-  Arial: arial as unknown as CapsizeMetrics,
-  Roboto: roboto as unknown as CapsizeMetrics,
+// Basic font metrics - can be extended as needed
+const BASIC_METRICS: Record<string, CapsizeMetrics> = {
+  Arial: {
+    ascent: 728,
+    descent: -210,
+    lineGap: 67,
+    unitsPerEm: 1000,
+    xWidthAvg: 554,
+  },
+  Roboto: {
+    ascent: 927,
+    descent: -244,
+    lineGap: 0,
+    unitsPerEm: 1000,
+    xWidthAvg: 543,
+  },
+  Montserrat: {
+    ascent: 968,
+    descent: -251,
+    lineGap: 0,
+    unitsPerEm: 1000,
+    xWidthAvg: 542,
+  },
 };
 
 /**
- * Calculate font metrics using Canvas API for fonts not in Capsize
+ * Calculate font metrics using Canvas API for fonts not in basic metrics
  */
 function calculateMetricsFromCanvas(fontFamily: string, fontSize = 1000): CapsizeMetrics {
   if (typeof document === 'undefined') {
     // Fallback for server-side rendering
     console.warn(`Canvas not available for ${fontFamily}, using Arial fallback`);
-    return METRICS['Arial'];
+    return BASIC_METRICS['Arial'];
   }
 
   const canvas = document.createElement('canvas');
@@ -31,7 +46,7 @@ function calculateMetricsFromCanvas(fontFamily: string, fontSize = 1000): Capsiz
   
   if (!ctx) {
     console.warn(`Canvas context not available for ${fontFamily}, using Arial fallback`);
-    return METRICS['Arial'];
+    return BASIC_METRICS['Arial'];
   }
 
   try {
@@ -71,37 +86,8 @@ function calculateMetricsFromCanvas(fontFamily: string, fontSize = 1000): Capsiz
     };
   } catch (error) {
     console.warn(`Error calculating metrics for ${fontFamily}:`, error);
-    return METRICS['Arial'];
+    return BASIC_METRICS['Arial'];
   }
-}
-
-function loadMetrics(fontFamily: string): CapsizeMetrics | undefined {
-  const key = fontFamilyToCamelCase(fontFamily);
-  const metrics = (entireMetricsCollection as Record<string, any>)[key];
-  
-  if (!metrics) {
-    // Try common variations for font names
-    const variations = [
-      fontFamily.toLowerCase().replace(/\s+/g, ''),
-      fontFamily.replace(/\s+/g, ''),
-      fontFamily.toLowerCase().replace(/\s+/g, '-'),
-    ];
-    
-    for (const variation of variations) {
-      const variantKey = fontFamilyToCamelCase(variation);
-      const variantMetrics = (entireMetricsCollection as Record<string, any>)[variantKey];
-      if (variantMetrics) {
-        const {ascent, descent, lineGap, unitsPerEm, xWidthAvg} = variantMetrics;
-        console.log(`Found metrics for ${fontFamily} via variation: ${variation}`);
-        return {ascent, descent, lineGap, unitsPerEm, xWidthAvg};
-      }
-    }
-    
-    return undefined;
-  }
-  
-  const {ascent, descent, lineGap, unitsPerEm, xWidthAvg} = metrics;
-  return {ascent, descent, lineGap, unitsPerEm, xWidthAvg};
 }
 
 function selectBestFallback(fontFamily: string): string {
@@ -117,16 +103,25 @@ function selectBestFallback(fontFamily: string): string {
 }
 
 export function getFontMetrics(fontFamily: string): CapsizeMetrics {
-  // Check hardcoded metrics first
-  if (METRICS[fontFamily]) {
-    return METRICS[fontFamily];
+  // Check basic metrics first
+  if (BASIC_METRICS[fontFamily]) {
+    return BASIC_METRICS[fontFamily];
   }
 
-  // Try to load from Capsize collection
-  const loaded = loadMetrics(fontFamily);
-  if (loaded) {
-    METRICS[fontFamily] = loaded;
-    return loaded;
+  // Try common font name variations
+  const variations = [
+    fontFamily,
+    fontFamily.toLowerCase(),
+    fontFamily.replace(/\s+/g, ''),
+    fontFamily.toLowerCase().replace(/\s+/g, ''),
+  ];
+
+  for (const variation of variations) {
+    if (BASIC_METRICS[variation]) {
+      console.log(`Found metrics for ${fontFamily} via variation: ${variation}`);
+      BASIC_METRICS[fontFamily] = BASIC_METRICS[variation]; // Cache it
+      return BASIC_METRICS[variation];
+    }
   }
   
   // Calculate dynamically using Canvas API
@@ -134,13 +129,13 @@ export function getFontMetrics(fontFamily: string): CapsizeMetrics {
   const calculated = calculateMetricsFromCanvas(fontFamily);
   
   // Cache the calculated metrics
-  METRICS[fontFamily] = calculated;
+  BASIC_METRICS[fontFamily] = calculated;
   
   return calculated;
 }
 
 /**
- * Extract fonts used in a Google Slides presentation
+ * Extract fonts used in slide definitions
  * This can be called before processing slides to pre-warm the font cache
  */
 export function extractFontsFromSlides(slides: any[]): Set<string> {
