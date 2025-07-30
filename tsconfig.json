@@ -2,7 +2,6 @@
   "compilerOptions": {
     "target": "es2018",
     "lib": ["es2018"],
-    "module": "commonjs",
     "rootDir": ".",
     "outDir": "lib",
     "esModuleInterop": true,
@@ -10,7 +9,8 @@
     "noEmit": false,
     "skipLibCheck": true,
     "strict": false,
-    "moduleResolution": "node",
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
     "resolveJsonModule": true,
     "declaration": true,
     "sourceMap": true,
