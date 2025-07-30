@@ -64,8 +64,11 @@ function preprocessMarkdown(markdown: string): string {
         out.push('');
       }
       out.push(`${indent}{.column}`);
+      // Ensure the column marker is treated as its own paragraph. Markdown
+      // parsing requires a blank line after the marker, otherwise the
+      // following text is appended to the previous paragraph.
+      out.push('');
       if (after) {
-        out.push('');
         out.push(`${indent}${after}`);
       }
       continue;
