@@ -231,7 +231,9 @@ export default class GenericLayout {
     }
 
     const box = this.calculateBoundingBox(placeholder);
-    const size = estimateFontSize(value.rawText, box);
+    const firstRun = value.textRuns[0];
+    const fontFamily = firstRun?.fontFamily || 'Arial';
+    const size = estimateFontSize(value.rawText, box, 48, 8, fontFamily);
     const resized = applyFontSize(value, size);
 
     this.appendInsertTextRequests(
