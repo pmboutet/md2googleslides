@@ -16,7 +16,7 @@ import Debug from 'debug';
 import extend from 'extend';
 type Token = any;
 import * as parse5 from 'parse5';
-import {Element} from 'parse5/dist/tree-adapters/default';
+import type { DefaultTreeAdapterTypes } from 'parse5';
 import fileUrl from 'file-url';
 import {SlideDefinition, StyleDefinition} from '../slides';
 import parseMarkdown from './parser';
@@ -176,7 +176,7 @@ inlineTokenRules['html_inline'] = (token, context) => {
     ? parse5.parseFragment(context.inlineHtmlContext as any, token.content)
     : parse5.parseFragment(token.content);
   if (fragment.childNodes && fragment.childNodes.length) {
-    const node = fragment.childNodes[0] as Element;
+    const node = fragment.childNodes[0] as DefaultTreeAdapterTypes.Element;
     const style: StyleDefinition = {};
 
     switch (node.nodeName) {
