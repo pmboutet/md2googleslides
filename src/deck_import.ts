@@ -207,3 +207,70 @@ export async function ensureMarkers(
     slides,
   };
 }
+
+export async function copySlide(
+  oauth2Client: OAuth2Client,
+  presentationId: string,
+  slideId: string
+): Promise<string> {
+  const api = google.slides({version: 'v1', auth: oauth2Client});
+  const res = await api.presentations.batchUpdate({
+    presentationId,
+    requestBody: {
+      requests: [
+        {
+          duplicateObject: {
+            objectId: slideId,
+          },
+        },
+      ],
+    },
+  });
+  return res.data.replies?.[0]?.duplicateObject?.objectId ?? '';
+}
+
+export interface ElementUpdate {
+  elementId: string;
+  text?: string;
+  imageUrl?: string;
+}
+
+export async function editSlide(
+  oauth2Client: OAuth2Client,
+  presentationId: string,
+  updates: ElementUpdate[]
+): Promise<void> {
+  const api = google.slides({version: 'v1', auth: oauth2Client});
+  const requests: SlidesV1.Schema$Request[] = [];
+  updates.forEach(u => {
+    if (u.text !== undefined) {
+      requests.push({
+        deleteText: {
+          objectId: u.elementId,
+          textRange: {type: 'ALL'},
+        },
+      });
+      requests.push({
+        insertText: {
+          objectId: u.elementId,
+          text: u.text,
+          insertionIndex: 0,
+        },
+      });
+    }
+    if (u.imageUrl) {
+      requests.push({
+        replaceImage: {
+          imageObjectId: u.elementId,
+          url: u.imageUrl,
+        },
+      });
+    }
+  });
+  if (requests.length) {
+    await api.presentations.batchUpdate({
+      presentationId,
+      requestBody: {requests},
+    });
+  }
+}

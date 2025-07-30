@@ -165,6 +165,27 @@ Endpoint existant pour la compatibilité rétroactive.
 
 Endpoint existant avec upload de fichier.
 
+### 4. Macros `{copy}` et `{edit}`
+
+Le service supporte désormais deux macros dans le markdown permettant de
+dupliquer ou de modifier une slide existante sans passer par un nouvel
+endpoint :
+
+```markdown
+{copy="ID_DE_LA_SLIDE"}
+{.bloc="ID_DU_BLOC"}
+Nouveau contenu du bloc
+```
+
+- `{copy=id}` crée une nouvelle slide en dupliquant celle dont l'identifiant est
+  fourni.
+- `{edit=id}` applique les mises à jour directement sur la slide existante.
+- Les attributs `{.bloc=...}` servent à cibler l'élément (texte, image ou vidéo)
+  à remplacer dans la slide copiée ou éditée.
+
+Ces macros fonctionnent avec l'endpoint `/convert-advanced` déjà présent. Il
+suffit d'inclure les directives dans le markdown envoyé à l'API.
+
 ## Concepts Clés
 
 ### Template ID vs Append ID
