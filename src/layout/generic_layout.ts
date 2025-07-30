@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import Debug from 'debug';
-import {uuid} from '../utils';
+import {uuid, estimateFontSize, applyFontSize} from '../utils';
 import extend from 'extend';
 // @ts-ignore
 import Layout from 'layout';
@@ -230,8 +230,12 @@ export default class GenericLayout {
       placeholder = pageElements[0];
     }
 
+    const box = this.calculateBoundingBox(placeholder);
+    const size = estimateFontSize(value.rawText, box);
+    const resized = applyFontSize(value, size);
+
     this.appendInsertTextRequests(
-      value,
+      resized,
       {objectId: placeholder.objectId},
       requests
     );
