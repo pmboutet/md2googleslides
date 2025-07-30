@@ -15,6 +15,7 @@
 import {v1 as uuidV1} from 'uuid';
 
 import {TextDefinition, FontSize, StyleDefinition} from './slides';
+import {measureWrappedText} from './text-measurement';
 
 
 export function uuid(): string {
@@ -33,14 +34,23 @@ export function estimateFontSize(
 ): number {
   const widthPt = emuToPoints(box.width);
   const heightPt = emuToPoints(box.height);
-  const lines = Math.max(text.split('\n').length, 1);
-  const longestLine = text
-    .split('\n')
-    .reduce((m, line) => Math.max(m, line.length), 0);
-  const sizeByHeight = heightPt / (lines * 1.2);
-  const sizeByWidth = widthPt / (longestLine * 0.6);
-  const size = Math.min(max, sizeByHeight, sizeByWidth);
-  return size < min ? min : size;
+
+  let low = min;
+  let high = max;
+  let best = min;
+
+  while (high - low > 0.5) {
+    const mid = (low + high) / 2;
+    const {width, height} = measureWrappedText(text, mid, widthPt);
+    if (width <= widthPt && height <= heightPt) {
+      best = mid;
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+
+  return best;
 }
 
 
