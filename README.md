@@ -10,6 +10,7 @@ Convert Markdown or HTML files into Google Slides. Run it locally or inside Dock
 - HTTP service for automation
 - Automatic text resizing across placeholders with proportional scaling
 
+
 ## Quick start
 
 ### With Docker (recommended)

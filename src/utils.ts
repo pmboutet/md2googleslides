@@ -13,7 +13,9 @@
 // limitations under the License.
 
 import {v1 as uuidV1} from 'uuid';
+
 import {TextDefinition, FontSize, StyleDefinition} from './slides';
+
 
 export function uuid(): string {
   return uuidV1();
@@ -40,6 +42,7 @@ export function estimateFontSize(
   const size = Math.min(max, sizeByHeight, sizeByWidth);
   return size < min ? min : size;
 }
+
 
 export function maxFontSize(text: TextDefinition, base = 18): number {
   let max = base;
@@ -77,5 +80,6 @@ export function applyFontSize(
         },
       })),
     ],
+
   };
 }
