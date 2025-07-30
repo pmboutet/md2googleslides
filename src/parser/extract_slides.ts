@@ -50,6 +50,26 @@ function preprocessMarkdown(markdown: string): string {
       out.push(`${bullet[1]}- ${line.slice(bullet[0].length)}`);
       continue;
     }
+    // Handle column marker either at the start of the line or inline
+    const inlineIndex = line.indexOf('{.column}');
+    if (inlineIndex !== -1) {
+      const indentMatch = line.match(/^(\s*)/);
+      const indent = indentMatch ? indentMatch[1] : '';
+      const before = line.slice(0, inlineIndex).trimEnd();
+      const after = line.slice(inlineIndex + '{.column}'.length).trimStart();
+      if (before) {
+        out.push(`${indent}${before}`);
+      }
+      if (out.length > 0 && out[out.length - 1].trim() !== '') {
+        out.push('');
+      }
+      out.push(`${indent}{.column}`);
+      if (after) {
+        out.push('');
+        out.push(`${indent}${after}`);
+      }
+      continue;
+    }
     out.push(line);
   }
   return out.join('\n');
