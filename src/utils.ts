@@ -30,7 +30,8 @@ export function estimateFontSize(
   text: string,
   box: {width: number; height: number},
   max = 48,
-  min = 8
+  min = 8,
+  fontFamily = 'Arial'
 ): number {
   const widthPt = emuToPoints(box.width);
   const heightPt = emuToPoints(box.height);
@@ -41,7 +42,7 @@ export function estimateFontSize(
 
   while (high - low > 0.5) {
     const mid = (low + high) / 2;
-    const {width, height} = measureWrappedText(text, mid, widthPt);
+    const {width, height} = measureWrappedText(text, mid, widthPt, fontFamily);
     if (width <= widthPt && height <= heightPt) {
       best = mid;
       low = mid;
