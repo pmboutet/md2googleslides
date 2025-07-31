@@ -1,3 +1,6 @@
+import {execSync} from 'child_process';
+import * as opentype from 'opentype.js';
+
 export interface CapsizeMetrics {
   ascent: number;
   descent: number;
@@ -31,12 +34,53 @@ const BASIC_METRICS: Record<string, CapsizeMetrics> = {
   },
 };
 
+function downloadFontData(fontFamily: string): Buffer | null {
+  try {
+    const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily)}&display=swap`;
+    const css = execSync(`curl -L -s "${cssUrl}"`).toString();
+    const match = css.match(/url\(([^)]+\.ttf)\)/);
+    if (!match) {
+      console.warn(`Font URL not found for ${fontFamily}`);
+      return null;
+    }
+    const fontUrl = match[1];
+    return execSync(`curl -L -s "${fontUrl}"`);
+  } catch (err) {
+    console.warn(`Failed to download font ${fontFamily}:`, err);
+    return null;
+  }
+}
+
+function calculateMetricsFromFontFile(fontFamily: string): CapsizeMetrics | null {
+  const data = downloadFontData(fontFamily);
+  if (!data) {
+    return null;
+  }
+  try {
+    const font = opentype.parse(Uint8Array.from(data).buffer);
+    const ascent = font.ascender;
+    const descent = font.descender;
+    const lineGap = font.tables.os2.sTypoLineGap || 0;
+    const unitsPerEm = font.unitsPerEm;
+    const xWidthAvg = font.tables.os2.xAvgCharWidth || 500;
+    console.log(`Downloaded metrics for ${fontFamily}:`, {ascent, descent, lineGap, unitsPerEm, xWidthAvg});
+    return {ascent, descent, lineGap, unitsPerEm, xWidthAvg};
+  } catch (err) {
+    console.warn(`Error parsing font ${fontFamily}:`, err);
+    return null;
+  }
+}
+
 /**
  * Calculate font metrics using Canvas API for fonts not in basic metrics
  */
 function calculateMetricsFromCanvas(fontFamily: string, fontSize = 1000): CapsizeMetrics {
   if (typeof document === 'undefined') {
-    // Fallback for server-side rendering
+    // Server side: try downloading the font and reading metrics
+    const downloaded = calculateMetricsFromFontFile(fontFamily);
+    if (downloaded) {
+      return downloaded;
+    }
     console.warn(`Canvas not available for ${fontFamily}, using Arial fallback`);
     return BASIC_METRICS['Arial'];
   }
@@ -123,11 +167,11 @@ export function getFontMetrics(fontFamily: string): CapsizeMetrics {
       return BASIC_METRICS[variation];
     }
   }
-  
-  // Calculate dynamically using Canvas API
+
+  // Calculate dynamically using Canvas API or downloaded font
   console.log(`Computing metrics for ${fontFamily} using Canvas API`);
   const calculated = calculateMetricsFromCanvas(fontFamily);
-  
+
   // Cache the calculated metrics
   BASIC_METRICS[fontFamily] = calculated;
   
