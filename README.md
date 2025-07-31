@@ -9,6 +9,7 @@ Convert Markdown or HTML files into Google Slides. Run it locally or inside Dock
 - Example templates and layouts
 - HTTP service for automation
 - Automatic text resizing across placeholders with proportional scaling
+- Automatic download of Google Fonts when running in server environments
 
 
 ## Quick start
@@ -36,6 +37,10 @@ md2gslides examples/example.md --title "Demo"
 1. Create a project in the [Google Cloud Console](https://console.developers.google.com) and enable the Slides API.
 2. Create OAuth 2.0 credentials for a "Web application" and add `http://localhost` to the redirect URIs.
 3. Save the JSON file as `~/.md2googleslides/client_id.json` and run the tool once to authorize.
+
+## Font metrics
+
+When running inside Docker or a server environment, the tool automatically downloads the required Google Fonts and extracts their metrics using `opentype.js`. This ensures accurate text sizing even without a browser canvas. If the download fails, the metrics fall back to Arial.
 
 ## Examples
 
