@@ -71,7 +71,8 @@ export function applyFontSize(
   base = 18
 ): TextDefinition {
   const currentMax = maxFontSize(text, base);
-  const ratio = targetSize / currentMax;
+  // Apply a 20% reduction to better match rendered sizes in Slides
+  const ratio = (targetSize / currentMax) * 0.8;
 
   const baseRun: StyleDefinition = {
     start: 0,
