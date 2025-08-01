@@ -257,6 +257,16 @@ export async function editSlide(
           insertionIndex: 0,
         },
       });
+      // Ensure text automatically shrinks to fit the shape bounds
+      requests.push({
+        updateShapeProperties: {
+          objectId: u.elementId,
+          shapeProperties: {
+            autofit: {autofitType: 'TEXT_AUTOFIT'},
+          },
+          fields: 'autofit',
+        },
+      });
     }
     if (u.imageUrl) {
       requests.push({
